@@ -9,11 +9,10 @@
 #include "SystemDefines.hpp"
 #include "UARTDriver.hpp"
 #include "CubeTask.hpp"
-#include "FileSystemTask.hpp"
 
 // Tasks
-#include "Task1.hpp"
-#include "Task2.hpp"
+//#include "Task1.hpp"
+//#include "Task2.hpp"
 #include "Task3.hpp"
 #include "Task4.hpp"
 
@@ -33,9 +32,8 @@ void run_main()
 {
   // Init Tasks
   CubeTask::Inst().InitTask();
-  FileSystemTask::Inst().InitTask();
-  Task1::Inst().InitTask();
-  Task2::Inst().InitTask();
+//  Task1::Inst().InitTask();
+//  Task2::Inst().InitTask();
   Task3::Inst().InitTask();
   Task4::Inst().InitTask();
 
