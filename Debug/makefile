@@ -9,12 +9,9 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
--include SoarOS/Profiler/subdir.mk
 -include SoarOS/Drivers/subdir.mk
 -include SoarOS/Core/subdir.mk
 -include SoarOS/subdir.mk
--include SoarDrivers/NAU7802/subdir.mk
--include SoarDrivers/Components/subdir.mk
 -include SoarDrivers/.metadata/.plugins/org.eclipse.cdt.managedbuilder.core/subdir.mk
 -include SoarDrivers/.metadata/.plugins/org.eclipse.cdt.make.core/subdir.mk
 -include Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/subdir.mk
@@ -26,7 +23,6 @@ RM := rm -rf
 -include Core/Src/subdir.mk
 -include Components/SysCore/subdir.mk
 -include Components/SoarDebug/subdir.mk
--include Components/FileSystem/subdir.mk
 -include Components/subdir.mk
 -include objects.mk
 
@@ -101,7 +97,7 @@ main-build: LRB_Template.elf secondary-outputs
 
 # Tool invocations
 LRB_Template.elf LRB_Template.map: $(OBJS) $(USER_OBJS) C:\Users\eljav\Documents\SOAR\LRBTemplateRepository\STM32G491MESX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-g++ -o "LRB_Template.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\eljav\Documents\SOAR\LRBTemplateRepository\STM32G491MESX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LRB_Template.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
+	arm-none-eabi-g++ -o "LRB_Template.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\eljav\Documents\SOAR\LRBTemplateRepository\STM32G491MESX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LRB_Template.map" -Wl,--gc-sections -static -u _printf_float  -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
