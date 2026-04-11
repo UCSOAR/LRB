@@ -14,16 +14,6 @@ C_SRCS += \
 ../Core/Src/sysmem.c \
 ../Core/Src/system_stm32g4xx.c 
 
-OBJS += \
-./Core/Src/app_freertos.o \
-./Core/Src/main.o \
-./Core/Src/stm32g4xx_hal_msp.o \
-./Core/Src/stm32g4xx_hal_timebase_tim.o \
-./Core/Src/stm32g4xx_it.o \
-./Core/Src/syscalls.o \
-./Core/Src/sysmem.o \
-./Core/Src/system_stm32g4xx.o 
-
 C_DEPS += \
 ./Core/Src/app_freertos.d \
 ./Core/Src/main.d \
@@ -34,10 +24,20 @@ C_DEPS += \
 ./Core/Src/sysmem.d \
 ./Core/Src/system_stm32g4xx.d 
 
+OBJS += \
+./Core/Src/app_freertos.o \
+./Core/Src/main.o \
+./Core/Src/stm32g4xx_hal_msp.o \
+./Core/Src/stm32g4xx_hal_timebase_tim.o \
+./Core/Src/stm32g4xx_it.o \
+./Core/Src/syscalls.o \
+./Core/Src/sysmem.o \
+./Core/Src/system_stm32g4xx.o 
+
 
 # Each subdirectory must supply rules for building sources it contributes
 Core/Src/%.o Core/Src/%.su Core/Src/%.cyclo: ../Core/Src/%.c Core/Src/subdir.mk
-	arm-none-eabi-gcc "$<" -mcpu=cortex-m4 -std=gnu11 -g -DDEBUG -DUSE_FULL_LL_DRIVER -DUSE_HAL_DRIVER -DSTM32G491xx -c -I../Core/Inc -I../Drivers/STM32G4xx_HAL_Driver/Inc -I../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy -I../Middlewares/Third_Party/FreeRTOS/Source/include -I../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS -I../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F -I../Drivers/CMSIS/Device/ST/STM32G4xx/Include -I../Drivers/CMSIS/Include -I"C:/Users/eljav/Documents/SOAR/LRBTemplateRepository/Components/Inc" -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "$@"
+	arm-none-eabi-gcc "$<" -mcpu=cortex-m4 -std=gnu11 -g -DDEBUG -DUSE_FULL_LL_DRIVER -DUSE_HAL_DRIVER -DSTM32G491xx -c -I../Core/Inc -I../Drivers/STM32G4xx_HAL_Driver/Inc -I../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy -I../Middlewares/Third_Party/FreeRTOS/Source/include -I../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS -I../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F -I../Drivers/CMSIS/Device/ST/STM32G4xx/Include -I../Drivers/CMSIS/Include -I"C:/Users/eljav/Documents/SOAR/LRBTemplateRepository/Components/Inc" -I"C:/Users/eljav/Documents/SOAR/LRBTemplateRepository/Components/SysCore/Inc" -I"C:/Users/eljav/Documents/SOAR/LRBTemplateRepository/SoarDrivers/Components" -I"C:/Users/eljav/Documents/SOAR/LRBTemplateRepository/SoarOS/Libraries/embedded-template-library/include/etl" -I"C:/Users/eljav/Documents/SOAR/LRBTemplateRepository/SoarOS/Libraries/embedded-template-library/include" -O0 -ffunction-sections -fdata-sections -Wall -Wno-implicit-function-declaration -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "$@"
 
 clean: clean-Core-2f-Src
 
