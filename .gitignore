@@ -1,10 +1,10 @@
-# Ignore Build folders
-Debug/
-Release/
-**/Debug/
-**/Release/
-**/build/
-**/cmake-build-*/
+# Ignore Build folders (recursive)
+Debug/**
+Release/**
+**/Debug/**
+**/Release/**
+**/build/**
+**/cmake-build-*/**
 
 # Ignore Binaries folder outputs
 **/Binaries/**
