@@ -1,6 +1,6 @@
 ################################################################################
 # Automatically-generated file. Do not edit!
-# Toolchain: GNU Tools for STM32 (13.3.rel1)
+# Toolchain: GNU Tools for STM32 (14.3.rel1)
 ################################################################################
 
 -include ../makefile.init
@@ -39,13 +39,13 @@ $(wildcard ../makefile.targets) \
 
 
 BUILD_ARTIFACT_NAME := LRB_Template
-BUILD_ARTIFACT_EXTENSION :=
+BUILD_ARTIFACT_EXTENSION := elf
 BUILD_ARTIFACT_PREFIX :=
 BUILD_ARTIFACT := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME)$(if $(BUILD_ARTIFACT_EXTENSION),.$(BUILD_ARTIFACT_EXTENSION),)
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-LRB_Template \
+LRB_Template.elf \
 
 MAP_FILES += \
 LRB_Template.map \
@@ -61,11 +61,11 @@ LRB_Template.list \
 all: main-build
 
 # Main-build Target
-main-build: LRB_Template secondary-outputs
+main-build: LRB_Template.elf secondary-outputs
 
 # Tool invocations
-LRB_Template LRB_Template.map: $(OBJS) $(USER_OBJS) C:\Users\eljav\Documents\SOAR\LRBTemplateRepository\STM32G491MESX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "LRB_Template" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\eljav\Documents\SOAR\LRBTemplateRepository\STM32G491MESX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LRB_Template.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+LRB_Template.elf LRB_Template.map: $(OBJS) $(USER_OBJS) C:\Users\eljav\Documents\SOAR\LRBTemplateRepository\STM32G491MESX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "LRB_Template.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\eljav\Documents\SOAR\LRBTemplateRepository\STM32G491MESX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LRB_Template.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -81,7 +81,7 @@ LRB_Template.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 
 # Other Targets
 clean:
-	-$(RM) LRB_Template LRB_Template.list LRB_Template.map default.size.stdout
+	-$(RM) LRB_Template.elf LRB_Template.list LRB_Template.map default.size.stdout
 	-@echo ' '
 
 secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)

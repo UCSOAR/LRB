@@ -1,0 +1,41 @@
+# Ignore Build folders
+Debug/
+Release/
+**/Debug/
+**/Release/
+**/build/
+**/cmake-build-*/
+
+# Ignore Binaries folder outputs
+**/Binaries/**
+
+# Toolchain files
+*.o
+*.obj
+*.d
+*.su
+*.a
+*.lib
+*.lst
+
+# Firmware and link outputs
+*.elf
+*.bin
+*.hex
+*.map
+*.srec
+*.list
+
+# Temp files
+*.i
+*.ii
+
+# Logs and caches
+*.log
+.cache/
+.clangd/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
