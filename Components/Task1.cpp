@@ -6,10 +6,7 @@
 
 #include "Task1.hpp"
 #include "main.h"
-
-extern "C" {
-extern TIM_HandleTypeDef htim1;
-}
+#include "stm32g4xx_ll_tim.h"
 
 constexpr uint32_t TASK1_CHIRP_PERIOD_MS = 60000;
 constexpr uint32_t TASK1_CHIRP_ON_TIME_MS = 150;
@@ -49,15 +46,20 @@ void Task1::Run(void * pvParams)
             lastChirpTick = now;
 
             // 50% duty cycle on TIM1 CH1 for a short chirp.
-            __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, (htim1.Init.Period + 1U) / 2U);
-            HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+            const uint32_t pulse = (LL_TIM_GetAutoReload(TIM1) + 1U) / 2U;
+            LL_TIM_OC_SetCompareCH1(TIM1, pulse);
+            LL_TIM_EnableAllOutputs(TIM1);
+            LL_TIM_CC_EnableChannel(TIM1, LL_TIM_CHANNEL_CH1);
+            LL_TIM_EnableCounter(TIM1);
             vTaskDelay(pdMS_TO_TICKS(TASK1_CHIRP_ON_TIME_MS));
-            HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
-            __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0U);
+            LL_TIM_CC_DisableChannel(TIM1, LL_TIM_CHANNEL_CH1);
+            LL_TIM_DisableCounter(TIM1);
+            LL_TIM_DisableAllOutputs(TIM1);
+            LL_TIM_OC_SetCompareCH1(TIM1, 0U);
         }
 
         Command cm;
-        if (qEvtQueue->ReceiveWait(cm, pdMS_TO_TICKS(100))) {
+        if (qEvtQueue->Receive(cm, 100)) {
             HandleCommand(cm);
         }
     }

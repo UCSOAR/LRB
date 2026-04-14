@@ -70,34 +70,34 @@ $(wildcard ../makefile.init) \
 $(wildcard ../makefile.targets) \
 
 
-BUILD_ARTIFACT_NAME := LRB_Template
+BUILD_ARTIFACT_NAME := LRB
 BUILD_ARTIFACT_EXTENSION := elf
 BUILD_ARTIFACT_PREFIX :=
 BUILD_ARTIFACT := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME)$(if $(BUILD_ARTIFACT_EXTENSION),.$(BUILD_ARTIFACT_EXTENSION),)
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-LRB_Template.elf \
+LRB.elf \
 
 MAP_FILES += \
-LRB_Template.map \
+LRB.map \
 
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
-LRB_Template.list \
+LRB.list \
 
 
 # All Target
 all: main-build
 
 # Main-build Target
-main-build: LRB_Template.elf secondary-outputs
+main-build: LRB.elf secondary-outputs
 
 # Tool invocations
-LRB_Template.elf LRB_Template.map: $(OBJS) $(USER_OBJS) C:\Users\eljav\Documents\SOAR\LRBTemplateRepository\STM32G491MESX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-g++ -o "LRB_Template.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\eljav\Documents\SOAR\LRBTemplateRepository\STM32G491MESX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LRB_Template.map" -Wl,--gc-sections -static -u _printf_float  -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
+LRB.elf LRB.map: $(OBJS) $(USER_OBJS) C:\Users\eljav\Documents\SOAR\LRBTemplateRepository\STM32G491MESX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-g++ -o "LRB.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\eljav\Documents\SOAR\LRBTemplateRepository\STM32G491MESX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LRB.map" -Wl,--gc-sections -static -u _printf_float  -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -106,14 +106,14 @@ default.size.stdout: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-LRB_Template.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "LRB_Template.list"
+LRB.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "LRB.list"
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) LRB_Template.elf LRB_Template.list LRB_Template.map default.size.stdout
+	-$(RM) LRB.elf LRB.list LRB.map default.size.stdout
 	-@echo ' '
 
 secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)

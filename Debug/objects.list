@@ -1,5 +1,6 @@
 "./Components/SoarDebug/DebugTask.o"
 "./Components/SysCore/RunInterface.o"
+"./Components/Task1.o"
 "./Components/Task3.o"
 "./Components/Task4.o"
 "./Components/main_avionics.o"

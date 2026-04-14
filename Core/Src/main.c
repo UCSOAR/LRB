@@ -23,6 +23,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 //#define USE_FULL_LL_DRIVER
+//TODO: see if it works??
+# include "RunInterface.hpp"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -53,6 +56,8 @@ SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim1;
 
+UART_HandleTypeDef huart2;
+
 UART_HandleTypeDef huart3;
 
 PCD_HandleTypeDef hpcd_USB_FS;
@@ -82,6 +87,18 @@ void StartDefaultTask(void const * argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static void Debug_USART2_DirectTx(const char* s)
+{
+  if (s == NULL) {
+    return;
+  }
+
+  while (*s != '\0') {
+    LL_USART_TransmitData8(USART2, (uint8_t)*s++);
+    while (!LL_USART_IsActiveFlag_TXE(USART2)) {}
+  }
+  while (!LL_USART_IsActiveFlag_TC(USART2)) {}
+}
 
 /* USER CODE END 0 */
 
@@ -124,7 +141,8 @@ int main(void)
   MX_TIM1_Init();
   MX_CRC_Init();
   /* USER CODE BEGIN 2 */
-
+  Debug_USART2_DirectTx("\r\n[BOOT] USART2 direct TX OK\r\n");
+  run_interface();
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -584,6 +602,9 @@ static void MX_USART2_UART_Init(void)
   {
   }
   /* USER CODE BEGIN USART2_Init 2 */
+
+  // Keep a valid HAL handle for mixed LL/HAL ISR routing on USART2.
+  huart2.Instance = USART2;
 
   /* USER CODE END USART2_Init 2 */
 

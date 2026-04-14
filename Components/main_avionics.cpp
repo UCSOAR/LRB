@@ -11,7 +11,7 @@
 #include "CubeTask.hpp"
 
 // Tasks
-//#include "Task1.hpp"
+#include "Task1.hpp"
 //#include "Task2.hpp"
 #include "Task3.hpp"
 #include "Task4.hpp"

@@ -1,7 +1,7 @@
 /*
  * Task3.cpp
  *
- * Empty task implementation using SoarOS wrapper
+ * Receive Uart Data
  */
 
 #include "Task3.hpp"
