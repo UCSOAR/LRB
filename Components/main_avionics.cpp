@@ -11,9 +11,10 @@
 #include "CubeTask.hpp"
 
 // Tasks
-#include "Task1.hpp"
+//#include "Task1.hpp"
 //#include "Task2.hpp"
-#include "Task3.hpp"
+#include "DebugTask.hpp"
+//#include "Task3.hpp"
 #include "Task4.hpp"
 
 /* Drivers ------------------------------------------------------------------*/
@@ -34,7 +35,8 @@ void run_main()
   CubeTask::Inst().InitTask();
 //  Task1::Inst().InitTask();
 //  Task2::Inst().InitTask();
-  Task3::Inst().InitTask();
+  DebugTask::Inst().InitTask();
+//  Task3::Inst().InitTask();
   Task4::Inst().InitTask();
 
   // Print System Boot Info : Warning, don't queue more than 10 prints before
