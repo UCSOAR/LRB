@@ -4,7 +4,7 @@
  * Reads the NAU7802 ADC and prints raw samples
  */
 
-#include "Task1.hpp"
+#include <NAU7802Task.hpp>
 #include "main.h"
 
 extern "C" {

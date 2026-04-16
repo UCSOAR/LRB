@@ -6,6 +6,8 @@
  ******************************************************************************
 */
 /* Includes -----------------------------------------------------------------*/
+#include <NAU7802Task.hpp>
+#include <StartupLedTask.hpp>
 #include "SystemDefines.hpp"
 #include "UARTDriver.hpp"
 #include "CubeTask.hpp"
@@ -13,8 +15,6 @@
 #include "DebugTask.hpp"
 
 // Tasks
-#include "Task1.hpp"
-#include "Task2.hpp"
 
 /* Drivers ------------------------------------------------------------------*/
 namespace Driver
