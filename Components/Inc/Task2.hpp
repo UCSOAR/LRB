@@ -1,7 +1,7 @@
 /**
  ******************************************************************************
- * File Name          : Task2.hpp
- * Description        : Task 2 - Empty task template
+ * File Name          : StartupLedTask.hpp
+ * Description        : Startup LED task
  ******************************************************************************
 */
 #ifndef COMPONENTS_TASK2_HPP_
@@ -18,27 +18,27 @@ enum TASK2_COMMANDS {
 };
 
 /* Class ------------------------------------------------------------------*/
-class Task2 : public Task
+class StartupLedTask : public Task
 {
 public:
-    static Task2& Inst() {
-        static Task2 inst;
+    static StartupLedTask& Inst() {
+        static StartupLedTask inst;
         return inst;
     }
 
     void InitTask();
 
 protected:
-    static void RunTask(void* pvParams) { Task2::Inst().Run(pvParams); }
+    static void RunTask(void* pvParams) { StartupLedTask::Inst().Run(pvParams); }
 
     void Run(void* pvParams);
 
     void HandleCommand(Command& cm);
 
 private:
-    Task2() : Task(TASK2_QUEUE_DEPTH_OBJS) {}
-    Task2(const Task2&);
-    Task2& operator=(const Task2&);
+    StartupLedTask() : Task(TASK2_QUEUE_DEPTH_OBJS) {}
+    StartupLedTask(const StartupLedTask&);
+    StartupLedTask& operator=(const StartupLedTask&);
 };
 
 #endif /* COMPONENTS_TASK2_HPP_ */
