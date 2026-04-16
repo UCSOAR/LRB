@@ -10,12 +10,11 @@
 #include "UARTDriver.hpp"
 #include "CubeTask.hpp"
 
-// Tasks
-//#include "Task1.hpp"
-//#include "Task2.hpp"
 #include "DebugTask.hpp"
-//#include "Task3.hpp"
-#include "Task4.hpp"
+
+// Tasks
+#include "Task1.hpp"
+#include "Task2.hpp"
 
 /* Drivers ------------------------------------------------------------------*/
 namespace Driver
@@ -33,11 +32,12 @@ void run_main()
 {
   // Init Tasks
   CubeTask::Inst().InitTask();
-//  Task1::Inst().InitTask();
-//  Task2::Inst().InitTask();
   DebugTask::Inst().InitTask();
-//  Task3::Inst().InitTask();
-  Task4::Inst().InitTask();
+
+  NAU7802Task::Inst().InitTask();
+  StartupLedTask::Inst().InitTask();
+
+
 
   // Print System Boot Info : Warning, don't queue more than 10 prints before
   // scheduler starts

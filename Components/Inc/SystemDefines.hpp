@@ -64,14 +64,4 @@ constexpr uint8_t TASK2_RTOS_PRIORITY = 2;        // Priority of Task 2
 constexpr uint8_t TASK2_QUEUE_DEPTH_OBJS = 10;    // Size of Task 2 queue
 constexpr uint16_t TASK2_STACK_DEPTH_WORDS = 512; // Size of Task 2 stack
 
-// TASK 3
-constexpr uint8_t TASK3_RTOS_PRIORITY = 2;        // Priority of Task 3
-constexpr uint8_t TASK3_QUEUE_DEPTH_OBJS = 10;    // Size of Task 3 queue
-constexpr uint16_t TASK3_STACK_DEPTH_WORDS = 512; // Size of Task 3 stack
-
-// TASK 4
-constexpr uint8_t TASK4_RTOS_PRIORITY = 2;        // Priority of Task 4
-constexpr uint8_t TASK4_QUEUE_DEPTH_OBJS = 10;    // Size of Task 4 queue
-constexpr uint16_t TASK4_STACK_DEPTH_WORDS = 512; // Size of Task 4 stack
-
 #endif // CUBE_MAIN_SYSTEM_DEFINES_H

@@ -87,6 +87,8 @@ void StartDefaultTask(void const * argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+/*
 static void Debug_USART2_DirectTx(const char* s)
 {
   if (s == NULL) {
@@ -99,7 +101,7 @@ static void Debug_USART2_DirectTx(const char* s)
   }
   while (!LL_USART_IsActiveFlag_TC(USART2)) {}
 }
-
+*/
 /* USER CODE END 0 */
 
 /**
@@ -141,7 +143,7 @@ int main(void)
   MX_TIM1_Init();
   MX_CRC_Init();
   /* USER CODE BEGIN 2 */
-  Debug_USART2_DirectTx("\r\n[BOOT] USART2 direct TX OK\r\n");
+  //Debug_USART2_DirectTx("\r\n[BOOT] USART2 direct TX OK\r\n");
   run_interface();
   /* USER CODE END 2 */
 
