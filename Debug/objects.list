@@ -61,6 +61,8 @@
 "./Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.o"
 "./SoarDrivers/.metadata/.plugins/org.eclipse.cdt.make.core/specs.o"
 "./SoarDrivers/.metadata/.plugins/org.eclipse.cdt.managedbuilder.core/spec.o"
+"./SoarDrivers/MAX31856MUD+/MAX31856MUD+Driver.o"
+"./SoarDrivers/MAX31856MUD+/main_read_test.o"
 "./SoarOS/Core/Command.o"
 "./SoarOS/Core/CubeUtils.o"
 "./SoarOS/Core/Mutex.o"

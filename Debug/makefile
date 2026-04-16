@@ -12,6 +12,7 @@ RM := rm -rf
 -include SoarOS/Drivers/subdir.mk
 -include SoarOS/Core/subdir.mk
 -include SoarOS/subdir.mk
+-include SoarDrivers/MAX31856MUD+/subdir.mk
 -include SoarDrivers/.metadata/.plugins/org.eclipse.cdt.managedbuilder.core/subdir.mk
 -include SoarDrivers/.metadata/.plugins/org.eclipse.cdt.make.core/subdir.mk
 -include Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/subdir.mk

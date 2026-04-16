@@ -50,6 +50,7 @@ Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
 Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang \
 SoarDrivers/.metadata/.plugins/org.eclipse.cdt.make.core \
 SoarDrivers/.metadata/.plugins/org.eclipse.cdt.managedbuilder.core \
+SoarDrivers/MAX31856MUD+ \
 SoarOS/Core \
 SoarOS \
 SoarOS/Drivers \
