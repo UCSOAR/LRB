@@ -4,7 +4,7 @@
  * Flashes debug LEDs at boot, then enables external LEDs
  */
 
-#include "Task2.hpp"
+#include <StartupLedTask.hpp>
 #include "main.h"
 
 namespace {

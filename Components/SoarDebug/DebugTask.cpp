@@ -6,10 +6,10 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
+#include <NAU7802Task.hpp>
 #include <SoarDebug/Inc/DebugTask.hpp>
 #include "Command.hpp"
 #include "CubeUtils.hpp"
-#include "Task1.hpp"
 #include <cctype>
 #include <cstring>
 
