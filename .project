@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>LRB_Template</name>
+	<name>LRB</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -31,3 +31,4 @@
 		<nature>org.eclipse.cdt.core.ccnature</nature>
 	</natures>
 </projectDescription>
+

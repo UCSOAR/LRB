@@ -118,6 +118,17 @@ void Error_Handler(void);
 #define TC2_nReady_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
+//TODO: See Aliases
+#define MCU_Ext_KED_Ind1_Pin Ext_ind_led1_Pin
+#define MCU_Ext_KED_Ind1_GPIO_Port Ext_ind_led1_GPIO_Port
+#define MCU_Ext_KED_Ind2_Pin Ext_ind_led2_Pin
+#define MCU_Ext_KED_Ind2_GPIO_Port Ext_ind_led2_GPIO_Port
+#define MCU_Ext_KED_Ind3_Pin Ext_ind_led3_Pin
+#define MCU_Ext_KED_Ind3_GPIO_Port Ext_ind_led3_GPIO_Port
+#define MCU_Ext_KED_Ind4_Pin Ext_ind_led4_Pin
+#define MCU_Ext_KED_Ind4_GPIO_Port Ext_ind_led4_GPIO_Port
+#define MCU_Ext_KED_Ind5_Pin Ext_ind_led5_Pin
+#define MCU_Ext_KED_Ind5_GPIO_Port Ext_ind_led5_GPIO_Port
 
 /* USER CODE END Private defines */
 

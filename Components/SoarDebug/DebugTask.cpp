@@ -9,6 +9,8 @@
 #include <SoarDebug/Inc/DebugTask.hpp>
 #include "Command.hpp"
 #include "CubeUtils.hpp"
+#include "Task1.hpp"
+#include <cctype>
 #include <cstring>
 
 #include "stm32g4xx_hal.h"
@@ -90,29 +92,81 @@ void DebugTask::Run(void *pvParams)
  */
 void DebugTask::HandleDebugMessage(const char *msg)
 {
+  char cleanMsg[DEBUG_RX_BUFFER_SZ_BYTES + 1] = {0};
+
+  // Trim leading/trailing whitespace so terminals with CR/LF both work.
+  const char *start = msg;
+  while (*start != '\0' && std::isspace(static_cast<unsigned char>(*start))) {
+    ++start;
+  }
+  const char *end = start + strlen(start);
+  while (end > start && std::isspace(static_cast<unsigned char>(*(end - 1)))) {
+    --end;
+  }
+  const size_t cleanLen = static_cast<size_t>(end - start);
+  if (cleanLen > 0) {
+    const size_t copyLen = (cleanLen > DEBUG_RX_BUFFER_SZ_BYTES) ? DEBUG_RX_BUFFER_SZ_BYTES : cleanLen;
+    memcpy(cleanMsg, start, copyLen);
+    cleanMsg[copyLen] = '\0';
+  }
+
+  char lowerMsg[DEBUG_RX_BUFFER_SZ_BYTES + 1] = {0};
+  for (size_t i = 0; i < strlen(cleanMsg); ++i) {
+    lowerMsg[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(cleanMsg[i])));
+  }
+
+
+  // NAUinterface for peripheral task controls.
+    if (strcmp(lowerMsg, "nau toggle") == 0 ||
+        strcmp(lowerMsg, "nau on") == 0 ||
+        strcmp(lowerMsg, "nau off") == 0 ||
+        strcmp(lowerMsg, "nau status") == 0)
+    {
+      Command cmd(DATA_COMMAND, TASK1_COMMAND_NAU_STATUS);
+      if (strcmp(lowerMsg, "nau toggle") == 0) {
+        cmd.SetTaskCommand(TASK1_COMMAND_NAU_TOGGLE);
+      } else if (strcmp(lowerMsg, "nau on") == 0) {
+        cmd.SetTaskCommand(TASK1_COMMAND_NAU_ON);
+      } else if (strcmp(lowerMsg, "nau off") == 0) {
+        cmd.SetTaskCommand(TASK1_COMMAND_NAU_OFF);
+      }
+        else{
+    	    SOAR_PRINT("Debug: Unsupported command: %s\n", cleanMsg);
+    	    SOAR_PRINT("Debug: Use  nau [on|off|toggle|status]\n");
+    	    debugMsgIdx = 0;
+    	    isDebugMsgReady = false;
+    	    return;
+      }
+      NAU7802Task::Inst().GetEventQueue()->Send(cmd);
+      SOAR_PRINT("Debug: Sent %s\n", cleanMsg);
+      debugMsgIdx = 0;
+      isDebugMsgReady = false;
+      return;
+    }
+
   //-- FILESYSTEM COMMANDS --
-  if (strcmp(msg, "fs_test") == 0)
+  if (strcmp(lowerMsg, "fs_test") == 0)
   {
     SOAR_PRINT("Debug: Triggering file system tests\n");
   }
-  else if (strcmp(msg, "fs_log") == 0)
+  else if (strcmp(lowerMsg, "fs_log") == 0)
   {
     SOAR_PRINT("Debug: Triggering sensor data logging\n");
     // Sample data for testing
     float temp = 25.5f + (HAL_GetTick() % 100) / 10.0f;     // Simulate varying temperature
     float humidity = 60.0f + (HAL_GetTick() % 200) / 10.0f; // Simulate varying humidity
   }
-  else if (strcmp(msg, "fs_cleanup") == 0)
+  else if (strcmp(lowerMsg, "fs_cleanup") == 0)
   {
     SOAR_PRINT("Debug: Triggering file system cleanup\n");
   }
   //-- SYSTEM / CHAR COMMANDS -- (Must be last)
-  else if (strcmp(msg, "sysreset") == 0)
+  else if (strcmp(lowerMsg, "sysreset") == 0)
   {
     // Reset the system
     SOAR_ASSERT(false, "System reset requested");
   }
-  else if (strcmp(msg, "sysinfo") == 0)
+  else if (strcmp(lowerMsg, "sysinfo") == 0)
   {
     // Print message
     SOAR_PRINT("\n\n-- CUBE SYSTEM --\n");
@@ -125,19 +179,20 @@ void DebugTask::HandleDebugMessage(const char *msg)
   else
   {
     // Single character command, or unknown command
-    switch (msg[0])
+    switch (lowerMsg[0])
     {
     case 'h':
       SOAR_PRINT("\n-- DEBUG COMMANDS --\n");
       SOAR_PRINT("sysinfo  - System information\n");
       SOAR_PRINT("sysreset - System reset\n");
+      SOAR_PRINT("NAU [on|off|toggle|status] - NAU7802 controls\n");
       SOAR_PRINT("fs_test  - Run file system tests\n");
       SOAR_PRINT("fs_log   - Log sample sensor data\n");
       SOAR_PRINT("fs_cleanup - Run file system cleanup\n");
       SOAR_PRINT("h        - Show this help\n\n");
       break;
     default:
-      SOAR_PRINT("Debug, unknown command: %s (type 'h' for help)\n", msg);
+      SOAR_PRINT("Debug, unknown command: %s (type 'h' for help)\n", cleanMsg);
       break;
     }
   }
@@ -163,7 +218,7 @@ void DebugTask::InterruptRxData(uint8_t errors)
   {
     // Check byte for end of message - note if using termite you must turn on
     // append CR
-    if (debugRxChar == '\r' || debugMsgIdx == DEBUG_RX_BUFFER_SZ_BYTES)
+    if (debugRxChar == '\r' || debugRxChar == '\n' || debugMsgIdx >= DEBUG_RX_BUFFER_SZ_BYTES)
     {
       // Null terminate and process
       debugBuffer[debugMsgIdx++] = '\0';
