@@ -2,6 +2,7 @@
 Debug/**
 Release/**
 **/Debug/**
+Debug
 **/Release/**
 **/build/**
 **/cmake-build-*/**
