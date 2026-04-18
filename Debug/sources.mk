@@ -51,6 +51,7 @@ Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang \
 SoarDrivers/.metadata/.plugins/org.eclipse.cdt.make.core \
 SoarDrivers/.metadata/.plugins/org.eclipse.cdt.managedbuilder.core \
 SoarDrivers/MAX31856MUD+ \
+SoarDrivers/NAU7802 \
 SoarOS/Core \
 SoarOS \
 SoarOS/Drivers \
