@@ -8,10 +8,11 @@
 #define COMPONENTS_NAU7802_TASK_HPP_
 
 /* Includes ------------------------------------------------------------------*/
-#include "Task.hpp"
 #include "SystemDefines.hpp"
 #include "NAU7802.hpp"
 #include "i2c_wrapper.hpp"
+
+#include "../../SoarOS/Core/Inc/Task.hpp"
 
 /* Macros ------------------------------------------------------------------*/
 enum TASK1_COMMANDS {

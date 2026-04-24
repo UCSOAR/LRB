@@ -10,12 +10,12 @@
 
 /* Includes
  * ----------------------------------------------------------------------------*/
-#include "Mutex.hpp"
-// Board specific includes
 #include "stm32g4xx_hal.h"
 #include "stm32g4xx_hal_rcc.h"
 #include "stm32g4xx_ll_dma.h"
 #include "stm32g4xx_ll_usart.h"
+
+#include "../../SoarOS/Core/Inc/Mutex.hpp"
 
 
 /* Interface Functions

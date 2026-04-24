@@ -20,10 +20,10 @@
 
 /* System Wide Includes ------------------------------------------------------------------*/
 #include "main_avionics.hpp" // C++ Main File Header
-#include "UARTDriver.hpp"
+#include "../../SoarOS/Drivers/Inc/UARTDriver.hpp"
 
 /* Cube++ Required Configuration ------------------------------------------------------------------*/
-#include "CubeDefines.hpp"
+#include "../../SoarOS/CubeDefines.hpp"
 constexpr UARTDriver *const DEFAULT_DEBUG_UART_DRIVER = UART::Debug; // UART Handle that ASSERT messages are sent over
 enum GLOBAL_COMMANDS : uint8_t
 {
@@ -53,6 +53,12 @@ constexpr uint8_t TASK_FILESYSTEM_QUEUE_DEPTH_OBJS = 8;      // Size of the file
 constexpr uint16_t TASK_FILESYSTEM_STACK_DEPTH_WORDS = 1024; // Size of the filesystem task stack
 constexpr uint32_t FILESYSTEM_TASK_QUEUE_TIMEOUT_MS = 100;   // Queue timeout for filesystem task
 constexpr uint32_t FILESYSTEM_TASK_LOOP_DELAY_MS = 1000;     // Main loop delay for filesystem task
+
+// TODO: PROFILER 4
+// Profiler task
+constexpr uint8_t TASK_PROFILER_PRIORITY = 3;  // Priority of the profiler task
+constexpr uint8_t TASK_PROFILER_QUEUE_DEPTH_OBJS =10;  // Size of the profiler task queue
+constexpr uint16_t TASK_PROFILER_STACK_DEPTH_WORDS =512;  // Size of the profiler task stack
 
 // TASK 1
 constexpr uint8_t TASK1_RTOS_PRIORITY = 2;        // Priority of Task 1

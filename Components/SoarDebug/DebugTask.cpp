@@ -8,12 +8,22 @@
 /* Includes ------------------------------------------------------------------*/
 #include <NAU7802Task.hpp>
 #include <SoarDebug/Inc/DebugTask.hpp>
-#include "Command.hpp"
-#include "CubeUtils.hpp"
 #include <cctype>
 #include <cstring>
 
 #include "stm32g4xx_hal.h"
+
+#include "../../SoarOS/Core/Inc/Command.hpp"
+#include "../../SoarOS/Core/Inc/CubeUtils.hpp"
+
+#include "../../SoarOS/Profiler/ProfilerTask.hpp"
+
+// Promise to the linker that this variable exists elsewhere
+// extern ProfilerTask profileSystem;
+
+
+//TODO: PROFILING 2
+
 
 // External Tasks (to send debug commands to)
 
@@ -196,6 +206,14 @@ void DebugTask::HandleDebugMessage(const char *msg)
       break;
     }
   }
+
+#if (configGENERATE_RUN_TIME_STATS == 1)  // enable profiling commands if profiling enabled
+  if (strcmp(msg, "profile") == 0) {
+	profileSystem = true;
+  } else if (strcmp(msg, "stop profiling") == 0) {
+	profileSystem = false;
+  }
+#endif
 
   // We've read the data, clear the buffer
   debugMsgIdx = 0;

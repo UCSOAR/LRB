@@ -8,8 +8,9 @@
 #define COMPONENTS_TASK2_HPP_
 
 /* Includes ------------------------------------------------------------------*/
-#include "Task.hpp"
 #include "SystemDefines.hpp"
+
+#include "../../SoarOS/Core/Inc/Task.hpp"
 
 /* Macros ------------------------------------------------------------------*/
 enum TASK2_COMMANDS {

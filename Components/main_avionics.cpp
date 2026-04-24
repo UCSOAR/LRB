@@ -9,10 +9,13 @@
 #include <NAU7802Task.hpp>
 #include <StartupLedTask.hpp>
 #include "SystemDefines.hpp"
-#include "UARTDriver.hpp"
-#include "CubeTask.hpp"
-
 #include "DebugTask.hpp"
+
+#include "../SoarOS/CubeTask.hpp"
+#include "../SoarOS/Drivers/Inc/UARTDriver.hpp"
+
+// TODO: PROFILING 3
+#include "ProfilerTask.hpp"
 
 // Tasks
 
@@ -37,7 +40,9 @@ void run_main()
   NAU7802Task::Inst().InitTask();
   StartupLedTask::Inst().InitTask();
 
-
+#if (configGENERATE_RUN_TIME_STATS == 1)
+  ProfilerTask::Inst().InitTask();
+#endif
 
   // Print System Boot Info : Warning, don't queue more than 10 prints before
   // scheduler starts

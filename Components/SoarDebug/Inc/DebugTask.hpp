@@ -7,9 +7,10 @@
 #ifndef CUBE_SYSTEM_DEBUG_TASK_HPP_
 #define CUBE_SYSTEM_DEBUG_TASK_HPP_
 /* Includes ------------------------------------------------------------------*/
-#include "Task.hpp"
 #include "SystemDefines.hpp"
-#include "UARTDriver.hpp"
+
+#include "../../../SoarOS/Core/Inc/Task.hpp"
+#include "../../../SoarOS/Drivers/Inc/UARTDriver.hpp"
 
 /* Enums ------------------------------------------------------------------*/
 enum DEBUG_TASK_COMMANDS {
