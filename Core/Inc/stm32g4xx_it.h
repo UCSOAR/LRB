@@ -27,7 +27,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "RunInterface.hpp"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
