@@ -31,7 +31,7 @@
 
 // timing
 #define W25N_DELAY_RESET_MS         5     // tRST max 500us
-#define W25N_TIMEOUT_MS  500
+#define W25N_TIMEOUT_MS             500   // tTIMEOUT max 500ms 
 
 // function prototypes
 uint8_t W25N_reset(void);
