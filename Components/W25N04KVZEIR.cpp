@@ -9,37 +9,14 @@
 #include "W25N04KVZEIR.hpp"
 #include "CubeTask.hpp"
 
+
 extern "C" {
     extern QSPI_HandleTypeDef hqspi1;
 }
 
-// --- Instruction Set ---
-#define W25N_CMD_READ_STATUS_REG    0x0F
-#define W25N_CMD_RESET_ENABLE       0x66
-#define W25N_CMD_RESET              0x99
-#define W25N_CMD_READ_JEDEC_ID      0x9F
-#define W25N_CMD_PAGE_DATA_READ     0x13
-#define W25N_CMD_FAST_READ_QUAD     0x6B
-#define W25N_CMD_WRITE_ENABLE       0x06
-#define W25N_CMD_BLOCK_ERASE        0xD8
-#define W25N_CMD_QUAD_LOAD_RANDOM   0x34
-#define W25N_CMD_PROGRAM_EXECUTE    0x10
-
-// --- Status Register Addresses ---
-#define W25N_SREG_STATUS            0xC0
-
-// --- Timing ---
-#define W25N_DELAY_RESET_MS         5     // tRST max 500us
-#define W25N_DELAY_BLOCK_ERASE_MS   10    // tBE max 10ms
-
-// --- Status Bits ---
-#define W25N_STATUS_BUSY            0x01
-
-
-#define W25N_TIMEOUT_MS  500
-
-
-
+/**
+ * @brief loop while flash busy, return false if timeout or HAL error occurs
+ */
 static bool W25N_ensure_ready(void) {
     uint32_t start = HAL_GetTick();
     while (true) {
@@ -50,7 +27,9 @@ static bool W25N_ensure_ready(void) {
     }
 }
 
-
+/**
+ * @brief read status register
+ */
 uint8_t W25N_status(void) {
     QSPI_CommandTypeDef cmd = {0};
     uint8_t status = 0;
@@ -73,18 +52,12 @@ uint8_t W25N_status(void) {
     return status;
 }
 
-
-void W25N_wait_ready(void) {
-    uint8_t status;
-    do {
-        status = W25N_status();
-    } while (status & W25N_STATUS_BUSY);
-}
-
-
+/**
+ * @brief reset device
+ */
 uint8_t W25N_reset(void) {
     if (!W25N_ensure_ready()) {
-        return 0xFF;
+        return 1;
     }
 
     QSPI_CommandTypeDef cmd = {0};
@@ -100,11 +73,13 @@ uint8_t W25N_reset(void) {
     if (HAL_QSPI_Command(&hqspi1, &cmd, HAL_MAX_DELAY) != HAL_OK) 
         return 1;
 
-    osDelay(W25N_DELAY_RESET_MS);
+    if (!W25N_ensure_ready()) return 1;
     return 0;
 }
 
-
+/**
+ * @brief read jedec ID
+ */
 uint32_t W25N_read_id(void) {
     if (!W25N_ensure_ready()) {
         return 0xFFFFFFFF;
@@ -126,14 +101,16 @@ uint32_t W25N_read_id(void) {
     if (HAL_QSPI_Receive(&hqspi1, read_data, HAL_MAX_DELAY) != HAL_OK) 
         return 0xFFFFFFFF;
     
-    osDelay(W25N_DELAY_RESET_MS);
+    if (!W25N_ensure_ready()) return 0xFFFFFFFF;
     return (read_data[0] << 16) | (read_data[1] << 8) | read_data[2];
 }
 
-
+/**
+ * @brief read data starting from specified page and offset into buffer
+ */
 uint8_t W25N_read(uint32_t start_page, uint16_t offset, uint32_t size, uint8_t *data) {
     if (!W25N_ensure_ready()) {
-        return 0xFF;
+        return 1;
     }
 
     // Load page into cache
@@ -146,6 +123,8 @@ uint8_t W25N_read(uint32_t start_page, uint16_t offset, uint32_t size, uint8_t *
     cmd.DataMode        = QSPI_DATA_NONE;
 
     if (HAL_QSPI_Command(&hqspi1, &cmd, HAL_MAX_DELAY) != HAL_OK) return 1;
+
+    if (!W25N_ensure_ready()) return 1;
 
     // Read from cache buffer
     cmd = {0};
@@ -164,13 +143,15 @@ uint8_t W25N_read(uint32_t start_page, uint16_t offset, uint32_t size, uint8_t *
     if (HAL_QSPI_Receive(&hqspi1, data, HAL_MAX_DELAY) != HAL_OK) 
         return 1;
 
-    osDelay(W25N_DELAY_RESET_MS);
+    if (!W25N_ensure_ready()) return 1;
     return 0;
 }
 
-
+/**
+ * @brief 128K block erase
+ */
 uint8_t W25N_block_erase(uint32_t block) {
-    if (!W25N_ensure_ready()) return 0xFF;
+    if (!W25N_ensure_ready()) return 1;
 
     QSPI_CommandTypeDef cmd = {0};
     cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
@@ -190,13 +171,47 @@ uint8_t W25N_block_erase(uint32_t block) {
 
     if (HAL_QSPI_Command(&hqspi1, &cmd, HAL_MAX_DELAY) != HAL_OK) return 1;
 
-    HAL_Delay(W25N_DELAY_BLOCK_ERASE_MS);
+    if (!W25N_ensure_ready()) return 1;
     return 0;
 }
 
+/**
+ * @brief clear block protection bits to allow erasing/programming
+ */
+uint8_t clear_block_protection(void) {
+    if (!W25N_ensure_ready()) return 1;
 
+    // send write enable
+    QSPI_CommandTypeDef cmd = {0};
+    cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
+    cmd.Instruction     = W25N_CMD_WRITE_ENABLE;
+    if (HAL_QSPI_Command(&hqspi1, &cmd, HAL_MAX_DELAY) != HAL_OK) return 1;
+
+    // write 0x00 to status register to clear BP bits
+    uint8_t val = 0x00;
+    cmd.Instruction     = W25N_CMD_WRITE_STATUS_REG;
+    cmd.AddressMode     = QSPI_ADDRESS_1_LINE;
+    cmd.AddressSize     = QSPI_ADDRESS_8_BITS;
+    cmd.Address         = W25N_SREG_PROTECTION;
+    cmd.DataMode        = QSPI_DATA_1_LINE;
+    cmd.NbData          = 1;
+
+    if (HAL_QSPI_Command(&hqspi1, &cmd, HAL_MAX_DELAY) != HAL_OK) return 1;
+    if (HAL_QSPI_Transmit(&hqspi1, &val, HAL_MAX_DELAY) != HAL_OK) return 1;
+
+    if (!W25N_ensure_ready()) return 1;
+    return 0;
+}
+
+/**
+ * @brief write to flash at page + offset
+ */
 uint8_t W25N_program_data(uint32_t page, uint16_t offset, uint16_t size, uint8_t *data) {
     if (!W25N_ensure_ready()) {
+        return 1;
+    }
+
+    if (clear_block_protection() != 0){
         return 1;
     }
 
@@ -207,6 +222,8 @@ uint8_t W25N_program_data(uint32_t page, uint16_t offset, uint16_t size, uint8_t
     cmd.DataMode        = QSPI_DATA_NONE;
 
     if (HAL_QSPI_Command(&hqspi1, &cmd, HAL_MAX_DELAY) != HAL_OK) return 1;
+
+    osDelay(W25N_DELAY_RESET_MS);
 
     // Load data into cache buffer
     cmd = {0};
@@ -221,6 +238,8 @@ uint8_t W25N_program_data(uint32_t page, uint16_t offset, uint16_t size, uint8_t
     if (HAL_QSPI_Command(&hqspi1, &cmd, HAL_MAX_DELAY) != HAL_OK) return 1;
     if (HAL_QSPI_Transmit(&hqspi1, data, HAL_MAX_DELAY) != HAL_OK) return 1;
 
+    osDelay(W25N_DELAY_RESET_MS);
+
     // Commit cache to flash
     cmd = {0};
     cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
@@ -233,6 +252,9 @@ uint8_t W25N_program_data(uint32_t page, uint16_t offset, uint16_t size, uint8_t
     if (HAL_QSPI_Command(&hqspi1, &cmd, HAL_MAX_DELAY) != HAL_OK) 
         return 1;
 
-    osDelay(W25N_DELAY_RESET_MS);
+    if (!W25N_ensure_ready()) return 1;
     return 0;
 }
+
+
+

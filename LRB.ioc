@@ -1,4 +1,4 @@
-﻿#MicroXplorer Configuration settings - do not modify
+#MicroXplorer Configuration settings - do not modify
 ADC1.Channel-0\#ChannelRegularConversion=ADC_CHANNEL_1
 ADC1.CommonPathInternal=null|null|null|null
 ADC1.IPParameters=Rank-0\#ChannelRegularConversion,Channel-0\#ChannelRegularConversion,SamplingTime-0\#ChannelRegularConversion,OffsetNumber-0\#ChannelRegularConversion,NbrOfConversionFlag,master,SingleDiff-0\#ChannelRegularConversion,CommonPathInternal
@@ -286,6 +286,9 @@ ProjectManager.UAScriptAfterPath=
 ProjectManager.UAScriptBeforePath=
 ProjectManager.UnderRoot=true
 ProjectManager.functionlistsort=1-SystemClock_Config-RCC-false-HAL-false,2-MX_GPIO_Init-GPIO-false-LL-true,3-MX_QUADSPI1_Init-QUADSPI1-false-HAL-true,4-MX_SPI1_Init-SPI1-false-HAL-true,5-MX_USB_PCD_Init-USB-false-HAL-true,6-MX_USART2_UART_Init-USART2-false-LL-true,7-MX_USART3_UART_Init-USART3-false-HAL-true,8-MX_ADC1_Init-ADC1-false-HAL-true,9-MX_I2C3_Init-I2C3-false-HAL-true,10-MX_TIM1_Init-TIM1-false-HAL-true,11-MX_CRC_Init-CRC-false-HAL-true
+QUADSPI1.FlashSize=28
+QUADSPI1.IPParameters=FlashSize,SampleShifting
+QUADSPI1.SampleShifting=QSPI_SAMPLE_SHIFTING_NONE
 RCC.ADC12Freq_Value=32000000
 RCC.ADC345Freq_Value=32000000
 RCC.AHBFreq_Value=32000000
@@ -355,4 +358,3 @@ VP_SYS_VS_tim2.Mode=TIM2
 VP_SYS_VS_tim2.Signal=SYS_VS_tim2
 board=custom
 rtos.0.ip=FREERTOS
-
