@@ -153,6 +153,10 @@ uint8_t W25N_read(uint32_t start_page, uint16_t offset, uint32_t size, uint8_t *
 uint8_t W25N_block_erase(uint32_t block) {
     if (!W25N_ensure_ready()) return 1;
 
+    if (clear_block_protection() != 0){
+        return 1;
+    }
+
     QSPI_CommandTypeDef cmd = {0};
     cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
     cmd.Instruction     = W25N_CMD_WRITE_ENABLE;

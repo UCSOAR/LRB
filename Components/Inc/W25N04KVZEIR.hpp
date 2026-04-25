@@ -48,6 +48,6 @@ uint8_t W25N_status(void);
 
 void W25N_wait_ready(void);
 
-uint8_t W25N_unlock_all(void);
+uint8_t clear_block_protection(void);
 
 #endif /* INC_W25N04KVZEIR_HPP_ */
