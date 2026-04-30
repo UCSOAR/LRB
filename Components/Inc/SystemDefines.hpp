@@ -64,4 +64,9 @@ constexpr uint8_t TASK2_RTOS_PRIORITY = 2;        // Priority of Task 2
 constexpr uint8_t TASK2_QUEUE_DEPTH_OBJS = 10;    // Size of Task 2 queue
 constexpr uint16_t TASK2_STACK_DEPTH_WORDS = 512; // Size of Task 2 stack
 
+// FLASH TASK
+constexpr uint8_t TASK_FLASH_PRIORITY = 3;         // Priority of the flash task
+constexpr uint8_t TASK_FLASH_QUEUE_DEPTH_OBJS = 8;      // Size of the flash task queue
+constexpr uint16_t TASK_FLASH_STACK_DEPTH_WORDS = 1024; // Size of the flash task stack
+
 #endif // CUBE_MAIN_SYSTEM_DEFINES_H
