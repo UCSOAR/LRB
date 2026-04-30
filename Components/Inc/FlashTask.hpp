@@ -30,8 +30,6 @@ enum FLASH_TASK_COMMANDS
 };
 
 struct FlashPayload {
-    uint32_t page;
-    uint16_t offset;
     uint16_t size;
     uint8_t  data[256];
 };
@@ -44,36 +42,41 @@ struct FlashPayload {
  ************************************/
 class FlashTask : public Task {
 public:
-  static FlashTask& Inst() {
-    static FlashTask inst;
-    return inst;
-  }
+    static FlashTask& Inst() {
+        static FlashTask inst;
+        return inst;
+    }
 
-  void InitTask();
-  void InitializeFlash();
-  void RunFlashTests();
-  void ReadFlash(uint32_t page, uint16_t offset, uint16_t size, uint8_t *data);
-  void ProgramFlash(uint32_t page, uint16_t offset, uint16_t size, uint8_t *data);
+    void InitTask();
+    void InitializeFlash();
+    void RunFlashTests();
+    void AppendFlash(uint16_t size, uint8_t *data);
+    void DumpFlash();
+    void AddrToPageOffset(uint32_t addr, uint32_t &page, uint16_t &offset);
+
+
+
+    void ResetWriteAddr() { FLASHWRITEADDR = 0; }   // remove
+    uint32_t GetWriteAddr() const { return FLASHWRITEADDR; } // remove
 
 
 protected:
-  static void RunTask(void* pvParams) {
-    FlashTask::Inst().Run(pvParams);
-  }  // Static Task Interface, passes control to the instance Run();
+    static void RunTask(void* pvParams) {
+        FlashTask::Inst().Run(pvParams);
+    }  // Static Task Interface, passes control to the instance Run();
 
-  void Run(void* pvParams);  // Main run code
-  void HandleCommand(Command &cm);
-
+    void Run(void* pvParams);  // Main run code
+    void HandleCommand(Command &cm);
 
 private:
-  FlashTask();                             // Private constructor
-  FlashTask(const FlashTask&);             // Prevent copy-construction
-  FlashTask& operator=(const FlashTask&);  // Prevent assignment
-
-  bool FlashInitialized = false;    // Whether the flash has been initialized or not
-  static constexpr uint16_t PAGE_SIZE_BYTES = 2048;
+    FlashTask();                             // Private constructor
+    FlashTask(const FlashTask&);             // Prevent copy-construction
+    FlashTask& operator=(const FlashTask&);  // Prevent assignment
 
 
+    bool FLASHINIT = false;                           // whether the flash has been initialized or not
+    static constexpr uint16_t PAGE_SIZE_BYTES = 2048; // page size
+    static uint32_t FLASHWRITEADDR;                   // current write address
 };
 /************************************
  * FUNCTION DECLARATIONS
