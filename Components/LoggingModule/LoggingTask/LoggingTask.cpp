@@ -215,7 +215,7 @@ void LoggingTask::HandleCommand(Command& cm){
 
 		break;
 	}
-	case DataBrokerMessageTypes :: INVALID:
+	default:
 	{
 		cm.Reset();
 		return;
