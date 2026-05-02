@@ -1,16 +1,42 @@
+/**
+ ********************************************************************************
+ * @file    LoggingService.cpp
+ * @author  Christy
+ * @date    May 2, 2026
+ * @brief
+ ********************************************************************************
+ */
+
+/************************************
+ * INCLUDES
+ ************************************/
 #include "LoggingService.hpp"
 
-uint8_t   LoggingService::ramLog[RAM_LOG_SIZE] = {0};
-uint32_t  LoggingService::ramHead              = 0;
-uint32_t  LoggingService::currentPage          = 0;
-uint16_t  LoggingService::pageOffset           = 0;
-uint8_t   LoggingService::done                 = 0;
-uint8_t   LoggingService::doneDump             = 0;
+/************************************
+ * PRIVATE MACROS AND DEFINES
+ ************************************/
+
+/************************************
+ * VARIABLES
+ ************************************/
+uint8_t LoggingService::ramLog[RAM_LOG_SIZE] = {0};
+uint32_t LoggingService::ramHead = 0;
+uint32_t LoggingService::currentPage = 0;
+uint16_t LoggingService::pageOffset = 0;
+uint8_t LoggingService::done = 0;
+uint8_t LoggingService::doneDump = 0;
 
 static uint8_t txBuf[RAM_LOG_SIZE];
 static uint8_t rxBuf[RAM_LOG_SIZE];
 static uint8_t sectorBuf[RAM_LOG_SIZE];
 
+/************************************
+ * FUNCTION DECLARATIONS
+ ************************************/
+
+/************************************
+ * FUNCTION DEFINITIONS
+ ************************************/
 LoggingService::LoggingService(LoggingDest dest, LoggingData dataType,
                                 uint8_t* ldata, uint32_t dataSize,
                                 LoggingPriority priority)
@@ -86,69 +112,6 @@ static const char* SensorTypeName(LoggingData type) {
     }
 }
 
-void LoggingService::ProcessFlashDump() {
-    done     = true;
-    doneDump = false;
-
-    constexpr uint32_t RECORD_SIZE = 20;
-    constexpr uint32_t CHUNK_SIZE  = RAM_LOG_SIZE; // 500
-
-    uint32_t dumpPage = 0;
-    uint16_t dumpOff  = 0;
-
-    while (dumpPage < LOG_TOTAL_PAGES && !doneDump) {
-        memset(sectorBuf, 0, sizeof(sectorBuf));
-
-        if (W25N_read(dumpPage, dumpOff, CHUNK_SIZE, sectorBuf) != 0)
-            break;
-
-        for (uint32_t i = 0; i + RECORD_SIZE <= CHUNK_SIZE; i += RECORD_SIZE) {
-            LoggingData type = static_cast<LoggingData>(sectorBuf[i]);
-            uint32_t timestamp;
-            memcpy(&timestamp, sectorBuf + i + 1, sizeof(timestamp));
-            uint8_t id = sectorBuf[i + 19];
-
-            if (type == LoggingData::IMU16G || type == LoggingData::IMU32G) {
-                int16_t accel[3], gyro[3], temp;
-                memcpy(accel, sectorBuf + i + 5,  sizeof(accel));
-                memcpy(gyro,  sectorBuf + i + 11, sizeof(gyro));
-                memcpy(&temp, sectorBuf + i + 17, sizeof(temp));
-                SOAR_PRINT("%s(ID=%u) Timestamp=%lu Accel=[%d,%d,%d] Gyro=[%d,%d,%d] Temp=%d\n",
-                    SensorTypeName(type), id, timestamp,
-                    accel[0], accel[1], accel[2],
-                    gyro[0], gyro[1], gyro[2], temp);
-            }
-            else if (type == LoggingData::BARO07 || type == LoggingData::BARO11) {
-                int32_t pressure; int16_t temperature;
-                memcpy(&pressure,    sectorBuf + i + 5, sizeof(pressure));
-                memcpy(&temperature, sectorBuf + i + 9, sizeof(temperature));
-                int16_t tc = temperature / 100;
-                int16_t tf = temperature % 100;
-                if (tf < 0) tf = -tf;
-                SOAR_PRINT("%s(ID=%u) Timestamp=%lu Pressure=%ld Temp=%d.%02d\n",
-                    SensorTypeName(type), id, timestamp, pressure, tc, tf);
-            }
-            else if (type == LoggingData::MAG) {
-                int32_t magX, magY, magZ;
-                memcpy(&magX, sectorBuf + i + 5,  sizeof(int32_t));
-                memcpy(&magY, sectorBuf + i + 9,  sizeof(int32_t));
-                memcpy(&magZ, sectorBuf + i + 13, sizeof(int32_t));
-                SOAR_PRINT("MAG Timestamp=%lu Mag=[%ld,%ld,%ld]\n",
-                    timestamp, (long)magX, (long)magY, (long)magZ);
-            }
-        }
-
-        // Advance through the page in 500B chunks
-        dumpOff += CHUNK_SIZE;
-        if (dumpOff >= LOG_PAGE_SIZE_BYTES) {
-            dumpOff = 0;
-            dumpPage++;
-        }
-    }
-
-    SOAR_PRINT("------FLASH DUMP COMPLETE------\n");
-}
-
 void LoggingService::StopDump() { doneDump = true; }
 
 LoggingStatus LoggingService::LogToInternalMemory() {
@@ -181,4 +144,71 @@ LoggingStatus LoggingService::MemAppend(const LoggingPacket* data) {
         ramLog[ramHead++] = 0;
 
     return LoggingStatus::LOG_FLASH_NOT_READY;
+}
+
+void LoggingService::ProcessFlashDump() {
+    done = true;
+
+    uint32_t lastPage = GetCurrentPage();
+    uint16_t lastOff  = GetPageOffset();
+
+    uint32_t dumpPage = 0;
+    uint16_t dumpOff  = 0;
+
+    while (dumpPage < lastPage || (dumpPage == lastPage && dumpOff < lastOff)) {
+        memset(sectorBuf, 0xFF, sizeof(sectorBuf));
+
+        if (W25N_read(dumpPage, dumpOff, RAM_LOG_SIZE, sectorBuf) != 0) {
+            SOAR_PRINT("READ FAIL\n");
+            break;
+        }
+
+        for (uint32_t i = 0; i + 20 <= RAM_LOG_SIZE; i += 20) {
+            if (sectorBuf[i] == 0xFF) goto dump_done;
+
+            LoggingData type = static_cast<LoggingData>(sectorBuf[i]);
+            uint32_t timestamp;
+            memcpy(&timestamp, sectorBuf + i + 1, sizeof(timestamp));
+            uint8_t id = sectorBuf[i + 19];
+
+            if (type == LoggingData::IMU16G || type == LoggingData::IMU32G) {
+                int16_t accel[3], gyro[3], temp;
+                memcpy(accel, sectorBuf + i + 5,  sizeof(accel));
+                memcpy(gyro,  sectorBuf + i + 11, sizeof(gyro));
+                memcpy(&temp, sectorBuf + i + 17, sizeof(temp));
+                SOAR_PRINT("%s(ID=%u) T=%lu A=[%d,%d,%d] G=[%d,%d,%d] Tmp=%d\n",
+                    SensorTypeName(type), id, timestamp,
+                    accel[0], accel[1], accel[2],
+                    gyro[0], gyro[1], gyro[2], temp);
+            }
+            else if (type == LoggingData::BARO07 || type == LoggingData::BARO11) {
+                int32_t pressure; int16_t temperature;
+                memcpy(&pressure,    sectorBuf + i + 5, sizeof(pressure));
+                memcpy(&temperature, sectorBuf + i + 9, sizeof(temperature));
+                int16_t tc = temperature / 100;
+                int16_t tf = temperature % 100;
+                if (tf < 0) tf = -tf;
+                SOAR_PRINT("%s(ID=%u) T=%lu P=%ld Tmp=%d.%02d\n",
+                    SensorTypeName(type), id, timestamp, pressure, tc, tf);
+            }
+            else if (type == LoggingData::MAG) {
+                int32_t magX, magY, magZ;
+                memcpy(&magX, sectorBuf + i + 5,  sizeof(int32_t));
+                memcpy(&magY, sectorBuf + i + 9,  sizeof(int32_t));
+                memcpy(&magZ, sectorBuf + i + 13, sizeof(int32_t));
+                SOAR_PRINT("MAG T=%lu [%ld,%ld,%ld]\n",
+                    timestamp, (long)magX, (long)magY, (long)magZ);
+            }
+            osDelay(50);
+        }
+
+        dumpOff += RAM_LOG_SIZE;
+        if (dumpOff >= LOG_PAGE_SIZE_BYTES) {
+            dumpOff = 0;
+            dumpPage++;
+        }
+    }
+
+dump_done:
+    SOAR_PRINT("------DUMP COMPLETE------\n");
 }

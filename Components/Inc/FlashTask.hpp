@@ -32,7 +32,7 @@ enum FLASH_TASK_COMMANDS
 
 struct FlashPayload {
     uint16_t size;
-    uint8_t  data[256];
+    uint8_t data[256];
 };
 /************************************
  * TYPEDEFS
@@ -54,12 +54,6 @@ public:
     void AppendFlash(uint16_t size, uint8_t *data);
     void DumpFlash();
     void AddrToPageOffset(uint32_t addr, uint32_t &page, uint16_t &offset);
-
-
-
-    void ResetWriteAddr() { FLASHWRITEADDR = 0; }   // remove
-    uint32_t GetWriteAddr() const { return FLASHWRITEADDR; } // remove
-
 
 protected:
     static void RunTask(void* pvParams) {
