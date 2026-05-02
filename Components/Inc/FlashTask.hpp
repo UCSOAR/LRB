@@ -16,6 +16,7 @@
 #include "SystemDefines.hpp"
 #include "Task.hpp"
 #include "W25N04KVZEIR.hpp"
+#include "LoggingService.hpp"
 /************************************
  * MACROS AND DEFINES
  ************************************/

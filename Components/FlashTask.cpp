@@ -215,8 +215,8 @@ void FlashTask::DumpFlash() {
     // return if flash not initialized
     if (!FLASHINIT)
         return;
-    //LoggingService::ProcessFlashDump();
-    ;
+        
+    LoggingService::ProcessFlashDump();
 }
 
 /**
