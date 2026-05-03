@@ -85,13 +85,13 @@ LoggingStatus LoggingService::LogToW25N() {
  */
 static const char* SensorTypeName(LoggingData type) {
     switch (type) {
-        case LoggingData::IMU32G: return "IMU32G";
-        case LoggingData::IMU16G: return "IMU16G";
-        case LoggingData::MAG: return "MAG";
-        case LoggingData::BARO07: return "BARO07";
-        case LoggingData::BARO11: return "BARO11";
-        case LoggingData::GPS: return "GPS";
-        case LoggingData::FILTER: return "FILTER";
+        // case LoggingData::IMU32G: return "IMU32G";
+        // case LoggingData::IMU16G: return "IMU16G";
+        // case LoggingData::MAG: return "MAG";
+        // case LoggingData::BARO07: return "BARO07";
+        // case LoggingData::BARO11: return "BARO11";
+        // case LoggingData::GPS: return "GPS";
+        // case LoggingData::FILTER: return "FILTER";
         default: return "UNKNOWN";
     }
 }
