@@ -52,8 +52,14 @@ public:
     void InitializeFlash();
     void RunFlashTests();
     void AppendFlash(uint16_t size, uint8_t *data);
-    void DumpFlash();
     void AddrToPageOffset(uint32_t addr, uint32_t &page, uint16_t &offset);
+    void ReadFlash(uint32_t addr, uint16_t size, uint8_t* buf);
+    void EraseBlocks(uint32_t startBlock, uint32_t count);
+    uint32_t GetWriteAddr() const { return FLASHWRITEADDR; }
+
+    static constexpr uint16_t PAGE_SIZE_BYTES = 2048; // page size
+    static constexpr uint16_t LOG_NUM_BLOCKS = 2048; // number of blocks
+    static constexpr uint16_t LOG_PAGES_PER_BLOCK = 64; // pages in a block
 
 protected:
     static void RunTask(void* pvParams) {
@@ -62,6 +68,7 @@ protected:
 
     void Run(void* pvParams);  // Main run code
     void HandleCommand(Command &cm);
+    
 
 private:
     FlashTask();                             // Private constructor
@@ -70,7 +77,6 @@ private:
 
 
     bool FLASHINIT = false;                           // whether the flash has been initialized or not
-    static constexpr uint16_t PAGE_SIZE_BYTES = 2048; // page size
     static uint32_t FLASHWRITEADDR;                   // current write address
 };
 /************************************

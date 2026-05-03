@@ -11,7 +11,7 @@
  * INCLUDES
  ************************************/
 #include "FlashTask.hpp"
-// #include "LoggingService.hpp"
+
 /************************************
  * PRIVATE MACROS AND DEFINES
  ************************************/
@@ -20,6 +20,7 @@
  * VARIABLES
  ************************************/
 uint32_t FlashTask::FLASHWRITEADDR = 0; //define static write address
+
 /************************************
  * FUNCTION DECLARATIONS
  ************************************/
@@ -55,6 +56,7 @@ void FlashTask::Run(void *pvParams) {
     }
 }
 
+
 /**
  * @brief Initialize the FlashTask
  */
@@ -71,6 +73,7 @@ void FlashTask::InitTask() {
   // Ensure creation succeded
   SOAR_ASSERT(rtValue == pdPASS, "FlashTask::InitTask - xTaskCreate() failed");
 }
+
 
 /**
  * @brief Handles a command
@@ -89,7 +92,7 @@ void FlashTask::HandleCommand(Command &cm) {
             break;
         case FLASH_DUMP:
         {
-            DumpFlash();
+            LoggingService::ProcessFlashDump();
         	break;
         }
         case FLASH_WRITE:
@@ -112,6 +115,7 @@ void FlashTask::HandleCommand(Command &cm) {
     cm.Reset();
 }
 
+
 /**
  * @brief convert address to page and offset
  */
@@ -121,6 +125,7 @@ void FlashTask::AddrToPageOffset(uint32_t addr, uint32_t &page, uint16_t &offset
     offset = addr % PAGE_SIZE_BYTES;
 }
 
+
 /**
  * @brief initialize flash, must be called before other flash operations
  */
@@ -129,6 +134,7 @@ void FlashTask::InitializeFlash() {
     FLASHINIT = true;
     FLASHWRITEADDR = 0;
 }
+
 
 /**
  * @brief run test to verify id, write, and clear
@@ -208,22 +214,11 @@ void FlashTask::RunFlashTests() {
     SOAR_PRINT("FlashTask::RunFlashTests() - All tests passed\n");
 }
 
-/**
- * @brief use logging service to dump entire flash contents
- */
-void FlashTask::DumpFlash() {
-    // return if flash not initialized
-    if (!FLASHINIT)
-        return;
-        
-    LoggingService::ProcessFlashDump();
-}
 
 /**
  * @brief append data to flash at current static address
- */
+*/
 void FlashTask::AppendFlash(uint16_t size, uint8_t *data) {
-    // return if flash not initialized, verify data pointer and size
     if (!FLASHINIT || data == nullptr || size == 0)
         return;
 
@@ -231,25 +226,78 @@ void FlashTask::AppendFlash(uint16_t size, uint8_t *data) {
     uint32_t addr = FLASHWRITEADDR;
     uint32_t dataIdx = 0;
 
-    // iterate through data
     while (remaining > 0) {
         uint32_t page;
         uint16_t offset;
         AddrToPageOffset(addr, page, offset);
 
+        // erase block if we're at the start of a block boundary
+        if (offset == 0 && (page % LOG_PAGES_PER_BLOCK) == 0) {
+            uint32_t block = page / LOG_PAGES_PER_BLOCK;
+            if (W25N_block_erase(block) != 0) {
+                return;
+            }
+        }
+
+        // calculate chunk size to write within current page
         uint16_t chunk = PAGE_SIZE_BYTES - offset;
         if (chunk > remaining)
             chunk = remaining;
 
-        // write chunk to flash
-        if (W25N_program_data(page, offset, chunk, &data[dataIdx]) != 0)
+        // write to flash
+        if (W25N_program_data(page, offset, chunk, &data[dataIdx]) != 0) {
             return;
+        }
 
-        // increment pointers and counters
+        // increment counters
         addr += chunk;
         dataIdx += chunk;
         remaining -= chunk;
     }
 
-    FLASHWRITEADDR = addr; // increment current address
+    FLASHWRITEADDR = addr;
+}
+
+
+/**
+ * @brief read from flash at given address and size into provided buffer
+ */
+void FlashTask::ReadFlash(uint32_t addr, uint16_t size, uint8_t* buf) {
+    if (!FLASHINIT || buf == nullptr || size == 0)
+        return;
+
+    uint32_t remaining = size;
+    uint32_t currentAddr = addr;
+    uint32_t bufIdx = 0;
+
+    // iterate while flash contents remain
+    while (remaining > 0) {
+        uint32_t page;
+        uint16_t offset;
+        AddrToPageOffset(currentAddr, page, offset);
+
+        // read in chunks within current page
+        uint16_t chunk = PAGE_SIZE_BYTES - offset;
+        if (chunk > remaining)
+            chunk = remaining;
+
+        if (W25N_read(page, offset, chunk, &buf[bufIdx]) != 0)
+            return;
+
+        // increment counters
+        currentAddr += chunk;
+        bufIdx += chunk;
+        remaining -= chunk;
+    }
+}
+
+
+/**
+ * @brief erase flash block
+ */
+void FlashTask::EraseBlocks(uint32_t startBlock, uint32_t count) {
+    for (uint32_t b = startBlock; b < startBlock + count; b++) {
+        if (W25N_block_erase(b) != 0)
+            SOAR_PRINT("FlashTask::EraseBlocks() - failed to erase block %lu\n", b);
+    }
 }

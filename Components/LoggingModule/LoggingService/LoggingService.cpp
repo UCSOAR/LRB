@@ -11,7 +11,6 @@
  * INCLUDES
  ************************************/
 #include "LoggingService.hpp"
-
 /************************************
  * PRIVATE MACROS AND DEFINES
  ************************************/
@@ -37,27 +36,35 @@ static uint8_t sectorBuf[RAM_LOG_SIZE];
 /************************************
  * FUNCTION DEFINITIONS
  ************************************/
-LoggingService::LoggingService(LoggingDest dest, LoggingData dataType,
-                                uint8_t* ldata, uint32_t dataSize,
-                                LoggingPriority priority)
-{
-    loggingData.dest     = dest;
+/**
+ * @brief constructor
+ */
+LoggingService::LoggingService(LoggingDest dest, LoggingData dataType, uint8_t* ldata, uint32_t dataSize, LoggingPriority priority) {
+    loggingData.dest = dest;
     loggingData.dataType = dataType;
-    loggingData.data     = ldata;
+    loggingData.data = ldata;
     loggingData.dataSize = dataSize;
     loggingData.priority = priority;
 }
 
+
+/**
+ * @brief main logging function, routes to the correct logging method based on the destination
+ */
 LoggingStatus LoggingService::LogData() {
     switch (loggingData.dest) {
-        case LoggingDest::RAM:          return LogToInternalMemory();
+        case LoggingDest::RAM: return LogToInternalMemory();
         case LoggingDest::FLASH_EXTERN: return LogToW25N();
-        case LoggingDest::FILE_SYSTEM:  return LoggingStatus::LOGGING_ERR;
-        case LoggingDest::DMA:          return LoggingStatus::LOGGING_ERR;
+        case LoggingDest::FILE_SYSTEM: return LoggingStatus::LOGGING_ERR;
+        case LoggingDest::DMA: return LoggingStatus::LOGGING_ERR;
     }
     return LoggingStatus::LOGGING_ERR;
 }
 
+
+/**
+ * @brief logs data to the W25N flash
+ */
 LoggingStatus LoggingService::LogToW25N() {
     if (done) return LoggingStatus::FLASH_FULL;
 
@@ -65,67 +72,44 @@ LoggingStatus LoggingService::LogToW25N() {
 
     if (status == LoggingStatus::LOG_FLASH_READY) {
         memcpy(txBuf, ramLog, RAM_LOG_SIZE);
-
-        // Erase block when we land on the first page of a new block
-        if (pageOffset == 0 && (currentPage % LOG_PAGES_PER_BLOCK) == 0) {
-            uint32_t block = currentPage / LOG_PAGES_PER_BLOCK;
-            if (W25N_block_erase(block) != 0)
-                return LoggingStatus::LOGGING_ERR;
-        }
-
-        // Write
-        if (W25N_program_data(currentPage, pageOffset, RAM_LOG_SIZE, txBuf) != 0)
-            return LoggingStatus::LOGGING_ERR;
-
-        // Read back and verify
-        if (W25N_read(currentPage, pageOffset, RAM_LOG_SIZE, rxBuf) != 0)
-            return LoggingStatus::LOGGING_ERR;
-
-        if (!BytesEqual(txBuf, rxBuf, RAM_LOG_SIZE))
-            return LoggingStatus::LOGGING_ERR;
-
-        // Advance position — 4 x 500B chunks fit in one 2048B page
-        pageOffset += RAM_LOG_SIZE;
-        if (pageOffset >= LOG_PAGE_SIZE_BYTES) {
-            pageOffset = 0;
-            currentPage++;
-            if (currentPage >= LOG_TOTAL_PAGES)
-                done = true;
-        }
-
+        FlashTask::Inst().AppendFlash(RAM_LOG_SIZE, txBuf);
         return LoggingStatus::LOGGING_SUCCESS;
     }
 
     return LoggingStatus::LOG_FLASH_NOT_READY;
 }
 
+
+/**
+ * @brief helper function to convert logging data type to string for printing during flash dump
+ */
 static const char* SensorTypeName(LoggingData type) {
     switch (type) {
         case LoggingData::IMU32G: return "IMU32G";
         case LoggingData::IMU16G: return "IMU16G";
-        case LoggingData::MAG:    return "MAG";
+        case LoggingData::MAG: return "MAG";
         case LoggingData::BARO07: return "BARO07";
         case LoggingData::BARO11: return "BARO11";
-        case LoggingData::GPS:    return "GPS";
+        case LoggingData::GPS: return "GPS";
         case LoggingData::FILTER: return "FILTER";
-        default:                  return "UNKNOWN";
+        default: return "UNKNOWN";
     }
 }
 
-void LoggingService::StopDump() { doneDump = true; }
 
+/**
+ * @brief logs data to internal memory buffer
+ */
 LoggingStatus LoggingService::LogToInternalMemory() {
     if (loggingData.data == nullptr || loggingData.dataSize == 0)
         return LoggingStatus::LOGGING_ERR;
     return MemAppend(&loggingData);
 }
 
-bool LoggingService::BytesEqual(const uint8_t* a, const uint8_t* b, uint32_t n) {
-    for (uint32_t i = 0; i < n; i++)
-        if (a[i] != b[i]) return false;
-    return true;
-}
 
+/**
+ * @brief appends data to the internal memory buffer
+ */
 LoggingStatus LoggingService::MemAppend(const LoggingPacket* data) {
     if (!data) return LoggingStatus::LOGGING_ERR;
 
@@ -146,69 +130,68 @@ LoggingStatus LoggingService::MemAppend(const LoggingPacket* data) {
     return LoggingStatus::LOG_FLASH_NOT_READY;
 }
 
+
+/**
+ * @brief reads flash contents and formats in human readable format
+ */
 void LoggingService::ProcessFlashDump() {
     done = true;
+	uint32_t readAddr = 0;
+    uint32_t totalBytes = FlashTask::Inst().GetWriteAddr();
 
-    uint32_t lastPage = GetCurrentPage();
-    uint16_t lastOff  = GetPageOffset();
-
-    uint32_t dumpPage = 0;
-    uint16_t dumpOff  = 0;
-
-    while (dumpPage < lastPage || (dumpPage == lastPage && dumpOff < lastOff)) {
+    while (readAddr < totalBytes) {
+		// read flash contents into cleared sector buffer
         memset(sectorBuf, 0xFF, sizeof(sectorBuf));
+        FlashTask::Inst().ReadFlash(readAddr, RAM_LOG_SIZE, sectorBuf);
 
-        if (W25N_read(dumpPage, dumpOff, RAM_LOG_SIZE, sectorBuf) != 0) {
-            SOAR_PRINT("READ FAIL\n");
-            break;
-        }
-
+		// read records in 20 byte chunks
         for (uint32_t i = 0; i + 20 <= RAM_LOG_SIZE; i += 20) {
-            if (sectorBuf[i] == 0xFF) goto dump_done;
-
+			// form logging data entry
             LoggingData type = static_cast<LoggingData>(sectorBuf[i]);
             uint32_t timestamp;
             memcpy(&timestamp, sectorBuf + i + 1, sizeof(timestamp));
             uint8_t id = sectorBuf[i + 19];
 
+			// convert to human readable format based on data type
             if (type == LoggingData::IMU16G || type == LoggingData::IMU32G) {
                 int16_t accel[3], gyro[3], temp;
-                memcpy(accel, sectorBuf + i + 5,  sizeof(accel));
-                memcpy(gyro,  sectorBuf + i + 11, sizeof(gyro));
-                memcpy(&temp, sectorBuf + i + 17, sizeof(temp));
-                SOAR_PRINT("%s(ID=%u) T=%lu A=[%d,%d,%d] G=[%d,%d,%d] Tmp=%d\n",
-                    SensorTypeName(type), id, timestamp,
-                    accel[0], accel[1], accel[2],
-                    gyro[0], gyro[1], gyro[2], temp);
+
+				memcpy(accel, sectorBuf + i + 5, sizeof(accel));
+				memcpy(gyro, sectorBuf + i + 11, sizeof(gyro));
+				memcpy(&temp, sectorBuf + i + 17, sizeof(temp));
+
+				SOAR_PRINT("%s(ID=%u) Timestamp=%lu Accel=[%d,%d,%d] Gyro=[%d,%d,%d] Temp=%d\n",
+									SensorTypeName(type), id, timestamp,
+									accel[0], accel[1], accel[2],
+									gyro[0], gyro[1], gyro[2],
+									temp);
             }
             else if (type == LoggingData::BARO07 || type == LoggingData::BARO11) {
-                int32_t pressure; int16_t temperature;
-                memcpy(&pressure,    sectorBuf + i + 5, sizeof(pressure));
-                memcpy(&temperature, sectorBuf + i + 9, sizeof(temperature));
-                int16_t tc = temperature / 100;
-                int16_t tf = temperature % 100;
-                if (tf < 0) tf = -tf;
-                SOAR_PRINT("%s(ID=%u) T=%lu P=%ld Tmp=%d.%02d\n",
-                    SensorTypeName(type), id, timestamp, pressure, tc, tf);
+                int32_t pressure;
+				int16_t temperature;
+				memcpy(&pressure, sectorBuf + i + 5, sizeof(pressure));
+				memcpy(&temperature, sectorBuf + i + 9, sizeof(temperature));
+
+				int16_t temp_c = temperature / 100;          // integer part
+				int16_t temp_frac = temperature % 100;       // fractional part
+				if (temp_frac < 0) temp_frac = -temp_frac;   // handle negative temperatures
+
+				SOAR_PRINT("%s(ID=%u) Timestamp=%lu Pressure=%ld Temp=%d.%02d\n",
+							SensorTypeName(type), id, timestamp, pressure, temp_c, temp_frac);
             }
             else if (type == LoggingData::MAG) {
                 int32_t magX, magY, magZ;
-                memcpy(&magX, sectorBuf + i + 5,  sizeof(int32_t));
-                memcpy(&magY, sectorBuf + i + 9,  sizeof(int32_t));
-                memcpy(&magZ, sectorBuf + i + 13, sizeof(int32_t));
-                SOAR_PRINT("MAG T=%lu [%ld,%ld,%ld]\n",
-                    timestamp, (long)magX, (long)magY, (long)magZ);
+
+				memcpy(&magX, sectorBuf + i + 5,  sizeof(int32_t));
+				memcpy(&magY, sectorBuf + i + 9,  sizeof(int32_t));
+				memcpy(&magZ, sectorBuf + i + 13, sizeof(int32_t));
+
+				SOAR_PRINT("%s Timestamp=%lu Mag=[%ld,%ld,%ld]\n",
+					SensorTypeName(type), timestamp,
+					(long)magX, (long)magY, (long)magZ);
             }
             osDelay(50);
         }
-
-        dumpOff += RAM_LOG_SIZE;
-        if (dumpOff >= LOG_PAGE_SIZE_BYTES) {
-            dumpOff = 0;
-            dumpPage++;
-        }
+        readAddr += RAM_LOG_SIZE;	// increment read address by buffer size
     }
-
-dump_done:
-    SOAR_PRINT("------DUMP COMPLETE------\n");
 }
