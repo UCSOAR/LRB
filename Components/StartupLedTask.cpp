@@ -26,17 +26,23 @@ inline void SetDebugLeds(bool on)
 inline void SetExternalLeds(bool on)
 {
     if (on) {
-        LL_GPIO_SetOutputPin(MCU_Ext_KED_Ind1_GPIO_Port, MCU_Ext_KED_Ind1_Pin);
-        LL_GPIO_SetOutputPin(MCU_Ext_KED_Ind2_GPIO_Port, MCU_Ext_KED_Ind2_Pin);
-        LL_GPIO_SetOutputPin(MCU_Ext_KED_Ind3_GPIO_Port, MCU_Ext_KED_Ind3_Pin);
-        LL_GPIO_SetOutputPin(MCU_Ext_KED_Ind4_GPIO_Port, MCU_Ext_KED_Ind4_Pin);
-        LL_GPIO_SetOutputPin(MCU_Ext_KED_Ind5_GPIO_Port, MCU_Ext_KED_Ind5_Pin);
+	    //HAL_GPIO_WritePin(Ext_ind_led1_GPIO_Port, Ext_ind_led1_Pin, GPIO_PIN_SET);
+	    //HAL_GPIO_WritePin(Ext_ind_led2_GPIO_Port, Ext_ind_led2_Pin, GPIO_PIN_SET);
+	    //HAL_GPIO_WritePin(Ext_ind_led3_GPIO_Port, Ext_ind_led3_Pin, GPIO_PIN_SET);
+	    //HAL_GPIO_WritePin(Ext_ind_led4_GPIO_Port, Ext_ind_led4_Pin, GPIO_PIN_SET);
+	    //HAL_GPIO_WritePin(Ext_ind_led5_GPIO_Port, Ext_ind_led5_Pin, GPIO_PIN_SET);
+
+        LL_GPIO_SetOutputPin(Ext_ind_led1_GPIO_Port, Ext_ind_led1_Pin);
+        LL_GPIO_SetOutputPin(Ext_ind_led2_GPIO_Port, Ext_ind_led2_Pin);
+        LL_GPIO_SetOutputPin(Ext_ind_led3_GPIO_Port, Ext_ind_led3_Pin);
+        LL_GPIO_SetOutputPin(Ext_ind_led4_GPIO_Port, Ext_ind_led4_Pin);
+        LL_GPIO_SetOutputPin(Ext_ind_led5_GPIO_Port, Ext_ind_led5_Pin);
     } else {
-        LL_GPIO_ResetOutputPin(MCU_Ext_KED_Ind1_GPIO_Port, MCU_Ext_KED_Ind1_Pin);
-        LL_GPIO_ResetOutputPin(MCU_Ext_KED_Ind2_GPIO_Port, MCU_Ext_KED_Ind2_Pin);
-        LL_GPIO_ResetOutputPin(MCU_Ext_KED_Ind3_GPIO_Port, MCU_Ext_KED_Ind3_Pin);
-        LL_GPIO_ResetOutputPin(MCU_Ext_KED_Ind4_GPIO_Port, MCU_Ext_KED_Ind4_Pin);
-        LL_GPIO_ResetOutputPin(MCU_Ext_KED_Ind5_GPIO_Port, MCU_Ext_KED_Ind5_Pin);
+        LL_GPIO_ResetOutputPin(Ext_ind_led1_GPIO_Port, Ext_ind_led1_Pin);
+        LL_GPIO_ResetOutputPin(Ext_ind_led2_GPIO_Port, Ext_ind_led2_Pin);
+        LL_GPIO_ResetOutputPin(Ext_ind_led3_GPIO_Port, Ext_ind_led3_Pin);
+        LL_GPIO_ResetOutputPin(Ext_ind_led4_GPIO_Port, Ext_ind_led4_Pin);
+        LL_GPIO_ResetOutputPin(Ext_ind_led5_GPIO_Port, Ext_ind_led5_Pin);
     }
 }
 }

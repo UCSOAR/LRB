@@ -6,6 +6,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
+#include <MAX31856TaskControl.hpp>
 #include <NAU7802Task.hpp>
 #include <SoarDebug/Inc/DebugTask.hpp>
 #include <cctype>
@@ -17,6 +18,7 @@
 #include "../../SoarOS/Core/Inc/CubeUtils.hpp"
 
 #include "../../SoarOS/Profiler/ProfilerTask.hpp"
+#include "../Inc/BuzzerTask.hpp"
 
 // Promise to the linker that this variable exists elsewhere
 // extern ProfilerTask profileSystem;
@@ -126,33 +128,130 @@ void DebugTask::HandleDebugMessage(const char *msg)
   }
 
 
-  // NAUinterface for peripheral task controls.
-    if (strcmp(lowerMsg, "nau toggle") == 0 ||
-        strcmp(lowerMsg, "nau on") == 0 ||
-        strcmp(lowerMsg, "nau off") == 0 ||
-        strcmp(lowerMsg, "nau status") == 0)
-    {
-      Command cmd(DATA_COMMAND, TASK1_COMMAND_NAU_STATUS);
-      if (strcmp(lowerMsg, "nau toggle") == 0) {
-        cmd.SetTaskCommand(TASK1_COMMAND_NAU_TOGGLE);
-      } else if (strcmp(lowerMsg, "nau on") == 0) {
-        cmd.SetTaskCommand(TASK1_COMMAND_NAU_ON);
-      } else if (strcmp(lowerMsg, "nau off") == 0) {
-        cmd.SetTaskCommand(TASK1_COMMAND_NAU_OFF);
-      }
-        else{
-    	    SOAR_PRINT("Debug: Unsupported command: %s\n", cleanMsg);
-    	    SOAR_PRINT("Debug: Use  nau [on|off|toggle|status]\n");
-    	    debugMsgIdx = 0;
-    	    isDebugMsgReady = false;
-    	    return;
-      }
+  // NAU interface for peripheral task controls.
+  if (strncmp(lowerMsg, "nau", 3) == 0)
+  {
+    if (strcmp(lowerMsg, "nau toggle") == 0) {
+      NAU7802Task::Inst().ToggleTaskActive();
+    } else if (strcmp(lowerMsg, "nau on") == 0) {
+      NAU7802Task::Inst().SetTaskActive(true);
+    } else if (strcmp(lowerMsg, "nau off") == 0) {
+      NAU7802Task::Inst().SetTaskActive(false);
+    } else if (strcmp(lowerMsg, "nau status") == 0) {
+      NAU7802Task::Inst().PrintStatus();
+    } else if (strcmp(lowerMsg, "nau drdy") == 0) {
+      NAU7802Task::Inst().PrintDrdy();
+    } else if (strcmp(lowerMsg, "nau regs") == 0) {
+      Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_DUMP_REGS);
       NAU7802Task::Inst().GetEventQueue()->Send(cmd);
+    } else if (strcmp(lowerMsg, "nau read") == 0) {
+      Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_READ);
+      NAU7802Task::Inst().GetEventQueue()->Send(cmd);
+    } else if (strcmp(lowerMsg, "nau tare") == 0) {
+      Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_TARE);
+      NAU7802Task::Inst().GetEventQueue()->Send(cmd);
+    } else if (strcmp(lowerMsg, "nau baseline") == 0) {
+      Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_BASELINE);
+      NAU7802Task::Inst().GetEventQueue()->Send(cmd);
+    } else if (strcmp(lowerMsg, "nau log on") == 0) {
+      NAU7802Task::Inst().SetLoggingEnabled(true);
+    } else if (strcmp(lowerMsg, "nau log off") == 0) {
+      NAU7802Task::Inst().SetLoggingEnabled(false);
+    } else if (strcmp(lowerMsg, "nau gain 1x") == 0) {
+      Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_SET_GAIN_1X);
+      NAU7802Task::Inst().GetEventQueue()->Send(cmd);
+    } else if (strcmp(lowerMsg, "nau gain 2x") == 0) {
+      Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_SET_GAIN_2X);
+      NAU7802Task::Inst().GetEventQueue()->Send(cmd);
+    } else if (strcmp(lowerMsg, "nau gain 4x") == 0) {
+      Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_SET_GAIN_4X);
+      NAU7802Task::Inst().GetEventQueue()->Send(cmd);
+    } else if (strcmp(lowerMsg, "nau gain 8x") == 0) {
+      Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_SET_GAIN_8X);
+      NAU7802Task::Inst().GetEventQueue()->Send(cmd);
+    } else if (strcmp(lowerMsg, "nau gain 128x") == 0) {
+      Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_SET_GAIN_128);
+      NAU7802Task::Inst().GetEventQueue()->Send(cmd);
+    } else {
+      SOAR_PRINT("Debug: Unsupported command: %s\n", cleanMsg);
+      SOAR_PRINT("Debug: Use nau [status|drdy|regs|read|tare|baseline|log on|log off|gain 1x|gain 2x|gain 4x|gain 8x|gain 128x|on|off|toggle]\n");
+      debugMsgIdx = 0;
+      isDebugMsgReady = false;
+      return;
+    }
+
+    SOAR_PRINT("Debug: Sent %s\n", cleanMsg);
+    debugMsgIdx = 0;
+    isDebugMsgReady = false;
+    return;
+  }
+
+    // MAX31856 interface for peripheral task controls.
+    if (strcmp(lowerMsg, "max toggle") == 0 ||
+      strcmp(lowerMsg, "max on") == 0 ||
+      strcmp(lowerMsg, "max off") == 0 ||
+      strcmp(lowerMsg, "max status") == 0 ||
+      strcmp(lowerMsg, "max read") == 0 ||
+      strcmp(lowerMsg, "max regs") == 0 ||
+      strcmp(lowerMsg, "max cs") == 0)
+    {
+      uint16_t maxTaskCommand = MAX31856_TASK_COMMAND_NONE;
+      if (strcmp(lowerMsg, "max toggle") == 0) {
+        maxTaskCommand = MAX31856_TASK_COMMAND_TOGGLE;
+      } else if (strcmp(lowerMsg, "max on") == 0) {
+        maxTaskCommand = MAX31856_TASK_COMMAND_ON;
+      } else if (strcmp(lowerMsg, "max off") == 0) {
+        maxTaskCommand = MAX31856_TASK_COMMAND_OFF;
+      } else if (strcmp(lowerMsg, "max status") == 0) {
+        maxTaskCommand = MAX31856_TASK_COMMAND_STATUS;
+      } else if (strcmp(lowerMsg, "max read") == 0) {
+        maxTaskCommand = MAX31856_TASK_COMMAND_READ_FORCE_TC1;
+      } else if (strcmp(lowerMsg, "max regs") == 0) {
+        maxTaskCommand = MAX31856_TASK_COMMAND_READ_REGS_TC1;
+      } else if (strcmp(lowerMsg, "max cs") == 0) {
+        maxTaskCommand = MAX31856_TASK_COMMAND_TOGGLE_CS_TC1;
+      }
+      else{
+        SOAR_PRINT("Debug: Unsupported command: %s\n", cleanMsg);
+        SOAR_PRINT("Debug: Use max [on|off|toggle|status|read|regs|cs]\n");
+        debugMsgIdx = 0;
+        isDebugMsgReady = false;
+        return;
+      }
+      SendMax31856TaskCommand(maxTaskCommand);
       SOAR_PRINT("Debug: Sent %s\n", cleanMsg);
       debugMsgIdx = 0;
       isDebugMsgReady = false;
       return;
     }
+
+  // Buzzer test commands
+  if (strncmp(lowerMsg, "bomb", 4) == 0)
+  {
+    Command cmd(DATA_COMMAND, BUZZER_TASK_COMMAND_PLAY_BOMB_SOUND);
+    BuzzerTask::Inst().GetEventQueue()->Send(cmd);
+    SOAR_PRINT("Debug: Bomb sound initiated\n");
+    debugMsgIdx = 0;
+    isDebugMsgReady = false;
+    return;
+  }
+
+  // Swtich Uart Routing [FSB] <---> [Debug] for testing
+  if (strcmp(lowerMsg, "route fsb") == 0)  {
+    UART::SetDebugRouteToFSB(true);
+    SOAR_PRINT("Debug: UART route set to FSB\n");
+    debugMsgIdx = 0;
+    isDebugMsgReady = false;
+    return;
+  }
+  else if (strcmp(lowerMsg, "route debug") == 0)
+  {
+    UART::SetDebugRouteToFSB(false);
+    SOAR_PRINT("Debug: UART route set to Debug\n");
+    debugMsgIdx = 0;
+    isDebugMsgReady = false;
+    return;
+  }
 
   //-- FILESYSTEM COMMANDS --
   if (strcmp(lowerMsg, "fs_test") == 0)
@@ -195,7 +294,9 @@ void DebugTask::HandleDebugMessage(const char *msg)
       SOAR_PRINT("\n-- DEBUG COMMANDS --\n");
       SOAR_PRINT("sysinfo  - System information\n");
       SOAR_PRINT("sysreset - System reset\n");
-      SOAR_PRINT("NAU [on|off|toggle|status] - NAU7802 controls\n");
+      SOAR_PRINT("NAU [status|drdy|regs|read|tare|baseline|log on|log off|gain 1x|gain 2x|gain 4x|gain 8x|gain 128x|on|off|toggle] - NAU7802 controls\n");
+      SOAR_PRINT("MAX [on|off|toggle|status|read|regs|cs] - MAX31856 controls\n");
+      SOAR_PRINT("route [debug|fsb]");
       SOAR_PRINT("fs_test  - Run file system tests\n");
       SOAR_PRINT("fs_log   - Log sample sensor data\n");
       SOAR_PRINT("fs_cleanup - Run file system cleanup\n");

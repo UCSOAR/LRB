@@ -41,6 +41,7 @@ enum GLOBAL_COMMANDS : uint8_t
 constexpr uint8_t UART_TASK_RTOS_PRIORITY = 2;        // Priority of the uart task
 constexpr uint8_t UART_TASK_QUEUE_DEPTH_OBJS = 10;    // Size of the uart task queue
 constexpr uint16_t UART_TASK_STACK_DEPTH_WORDS = 512; // Size of the uart task stack
+constexpr bool DEBUG_ROUTE_TO_FSB_DEFAULT = false;    // Default route for SOAR_PRINT/assert output (false = USART2, true = USART3/FSB)
 
 // DEBUG TASK
 constexpr uint8_t TASK_DEBUG_PRIORITY = 2;             // Priority of the debug task
@@ -69,5 +70,10 @@ constexpr uint16_t TASK1_STACK_DEPTH_WORDS = 512; // Size of Task 1 stack
 constexpr uint8_t TASK2_RTOS_PRIORITY = 2;        // Priority of Task 2
 constexpr uint8_t TASK2_QUEUE_DEPTH_OBJS = 10;    // Size of Task 2 queue
 constexpr uint16_t TASK2_STACK_DEPTH_WORDS = 512; // Size of Task 2 stack
+
+// BUZZER TASK
+constexpr uint8_t TASK_BUZZER_RTOS_PRIORITY = 2;        // Priority of the buzzer task
+constexpr uint8_t TASK_BUZZER_QUEUE_DEPTH_OBJS = 10;    // Size of the buzzer task queue
+constexpr uint16_t TASK_BUZZER_STACK_DEPTH_WORDS = 512; // Size of the buzzer task stack
 
 #endif // CUBE_MAIN_SYSTEM_DEFINES_H

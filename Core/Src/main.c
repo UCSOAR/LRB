@@ -57,15 +57,13 @@ SPI_HandleTypeDef hspi1;
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim3;
 
-UART_HandleTypeDef huart2;
-
 UART_HandleTypeDef huart3;
 
 PCD_HandleTypeDef hpcd_USB_FS;
 
 osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
-
+UART_HandleTypeDef huart2;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -144,7 +142,7 @@ int main(void)
   MX_I2C3_Init();
   MX_TIM1_Init();
   MX_CRC_Init();
-  // MX_TIM3_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   //Debug_USART2_DirectTx("\r\n[BOOT] USART2 direct TX OK\r\n");
 #if (configGENERATE_RUN_TIME_STATS == 1)
@@ -435,17 +433,17 @@ static void MX_SPI1_Init(void)
   hspi1.Instance = SPI1;
   hspi1.Init.Mode = SPI_MODE_MASTER;
   hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi1.Init.DataSize = SPI_DATASIZE_4BIT;
+  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
   hspi1.Init.CRCPolynomial = 7;
   hspi1.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
-  hspi1.Init.NSSPMode = SPI_NSS_PULSE_ENABLE;
+  hspi1.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
   if (HAL_SPI_Init(&hspi1) != HAL_OK)
   {
     Error_Handler();
@@ -658,7 +656,6 @@ static void MX_USART2_UART_Init(void)
 
   // Keep a valid HAL handle for mixed LL/HAL ISR routing on USART2.
   huart2.Instance = USART2;
-
   /* USER CODE END USART2_Init 2 */
 
 }
@@ -956,7 +953,27 @@ static void MX_GPIO_Init(void)
   LL_GPIO_Init(TC2_nReady_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
+  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
 
+  LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTB, LL_SYSCFG_EXTI_LINE4);
+  LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTB, LL_SYSCFG_EXTI_LINE7);
+  LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTB, LL_SYSCFG_EXTI_LINE13);
+  LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTD, LL_SYSCFG_EXTI_LINE8);
+
+  LL_EXTI_InitTypeDef extiConfig = {0};
+  extiConfig.Line_0_31 = LL_EXTI_LINE_4 | LL_EXTI_LINE_7 | LL_EXTI_LINE_8 | LL_EXTI_LINE_13;
+  extiConfig.LineCommand = ENABLE;
+  extiConfig.Mode = LL_EXTI_MODE_IT;
+  extiConfig.Trigger = LL_EXTI_TRIGGER_FALLING;
+  (void)LL_EXTI_Init(&extiConfig);
+
+  NVIC_SetPriority(EXTI4_IRQn, 5);
+  NVIC_EnableIRQ(EXTI4_IRQn);
+
+  NVIC_SetPriority(EXTI9_5_IRQn, 5);
+  NVIC_EnableIRQ(EXTI9_5_IRQn);
+  NVIC_SetPriority(EXTI15_10_IRQn, 5);
+  NVIC_EnableIRQ(EXTI15_10_IRQn);
   /* USER CODE END MX_GPIO_Init_2 */
 }
 

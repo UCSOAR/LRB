@@ -1,4 +1,8 @@
-# Ignore Build folders (recursive)
+# ========================================
+# Project Ignore Rules
+# ========================================
+
+# Build directories (project + recursive)
 Debug/**
 Release/**
 **/Debug/**
@@ -6,32 +10,54 @@ Debug
 **/Release/**
 **/build/**
 **/cmake-build-*/**
+build/
 
-# Ignore Binaries folder outputs
+# Binary output directories
 **/Binaries/**
 
-# Toolchain files
+# Compiled objects and debug symbols
 *.o
+*.ko
 *.obj
+*.elf
+*.dSYM/
+
+# Firmware and linker outputs
+*.srec
+*.lst
+*.hex
+*.bin
+*.list
+*.map
+
+# Executables and app bundles
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+
+# Libraries and precompiled headers
+*.lib
+*.a
+*.la
+*.lo
+*.dll
+*.so
+*.so.*
+*.dylib
+*.gch
+*.pch
+
+# Dependency and intermediate files
+*.ii
 *.d
 *.su
-*.a
-*.lib
-*.lst
+*.tmp
+.fuse*
+*.orig
 
-# Firmware and link outputs
-*.elf
-*.bin
-*.hex
-*.map
-*.srec
-*.list
-
-# Temp files
-*.i
-*.ii
-
-# Logs and caches
+# Logs and local caches
 *.log
 .cache/
 .clangd/
@@ -40,3 +66,18 @@ Debug
 .DS_Store
 Thumbs.db
 *.swp
+
+# STM32CubeMX and generated metadata
+STM32L152-Discovery.elf.launch
+.mxproject
+.dep/
+
+# IDE/editor settings and launch configs
+.metadata
+.settings
+[Rr]elease
+[Dd]ebug
+**/Debug/
+*.launch
+.vs/*
+.vscode/*

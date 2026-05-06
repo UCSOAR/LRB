@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "RunInterface.hpp"
+#include <stdint.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -52,6 +53,7 @@
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void MAX31856Task_HandleDrdyInterrupt(uint16_t gpioPin);
 
 /* USER CODE END 0 */
 
@@ -189,5 +191,9 @@ void USART2_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  MAX31856Task_HandleDrdyInterrupt(GPIO_Pin);
+}
 
 /* USER CODE END 1 */

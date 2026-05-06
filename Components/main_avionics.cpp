@@ -6,8 +6,11 @@
  ******************************************************************************
 */
 /* Includes -----------------------------------------------------------------*/
+#include <MAX31856Task.hpp>
 #include <NAU7802Task.hpp>
+#include <AnemometerTask.hpp>
 #include <StartupLedTask.hpp>
+#include <BuzzerTask.hpp>
 #include "SystemDefines.hpp"
 #include "DebugTask.hpp"
 
@@ -17,12 +20,39 @@
 // TODO: PROFILING 3
 #include "ProfilerTask.hpp"
 
+#include "stm32g4xx_hal_def.h"
+#include "stm32g4xx_hal_gpio.h"
+
 // Tasks
 
 /* Drivers ------------------------------------------------------------------*/
 namespace Driver
 {
   UARTDriver usart2(USART2);
+  UARTDriver usart3(USART3);
+}
+
+namespace UART
+{
+namespace
+{
+  volatile bool gRouteDebugToFSB = DEBUG_ROUTE_TO_FSB_DEFAULT;
+}
+
+void SetDebugRouteToFSB(bool enabled)
+{
+  gRouteDebugToFSB = enabled;
+}
+
+bool DebugRouteToFSB()
+{
+  return gRouteDebugToFSB;
+}
+
+UARTDriver* GetDebugRouteSink()
+{
+  return DebugRouteToFSB() ? FSB : Debug;
+}
 }
 
 /* Interface Functions
@@ -33,12 +63,19 @@ namespace Driver
  */
 void run_main()
 {
+  UART::SetDebugRouteToFSB(DEBUG_ROUTE_TO_FSB_DEFAULT);
+
   // Init Tasks
   CubeTask::Inst().InitTask();
   DebugTask::Inst().InitTask();
 
   NAU7802Task::Inst().InitTask();
+  MAX31856Task::Inst().InitTask();
+  AnemometerTask::Inst().InitTask();
   StartupLedTask::Inst().InitTask();
+  BuzzerTask::Inst().InitTask();
+
+
 
 #if (configGENERATE_RUN_TIME_STATS == 1)
   ProfilerTask::Inst().InitTask();
