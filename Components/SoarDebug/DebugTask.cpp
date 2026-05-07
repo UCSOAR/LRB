@@ -7,6 +7,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <MAX31856TaskControl.hpp>
+#include <AnemometerTask.hpp>
 #include <NAU7802Task.hpp>
 #include <SoarDebug/Inc/DebugTask.hpp>
 #include <cctype>
@@ -175,6 +176,31 @@ void DebugTask::HandleDebugMessage(const char *msg)
     } else {
       SOAR_PRINT("Debug: Unsupported command: %s\n", cleanMsg);
       SOAR_PRINT("Debug: Use nau [status|drdy|regs|read|tare|baseline|log on|log off|gain 1x|gain 2x|gain 4x|gain 8x|gain 128x|on|off|toggle]\n");
+      debugMsgIdx = 0;
+      isDebugMsgReady = false;
+      return;
+    }
+
+    SOAR_PRINT("Debug: Sent %s\n", cleanMsg);
+    debugMsgIdx = 0;
+    isDebugMsgReady = false;
+    return;
+  }
+
+  // Anemometer interface for peripheral task controls.
+  if (strncmp(lowerMsg, "anem", 4) == 0)
+  {
+    if (strcmp(lowerMsg, "anem toggle") == 0) {
+      AnemometerTask::Inst().ToggleTaskActive();
+    } else if (strcmp(lowerMsg, "anem on") == 0) {
+      AnemometerTask::Inst().SetTaskActive(true);
+    } else if (strcmp(lowerMsg, "anem off") == 0) {
+      AnemometerTask::Inst().SetTaskActive(false);
+    } else if (strcmp(lowerMsg, "anem status") == 0) {
+      AnemometerTask::Inst().PrintStatus();
+    } else {
+      SOAR_PRINT("Debug: Unsupported command: %s\n", cleanMsg);
+      SOAR_PRINT("Debug: Use anem [status|on|off|toggle]\n");
       debugMsgIdx = 0;
       isDebugMsgReady = false;
       return;

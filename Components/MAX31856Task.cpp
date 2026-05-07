@@ -39,7 +39,7 @@ constexpr uint8_t MAX31856_CR1_INIT =
 
 constexpr uint8_t MAX31856_MASK_INIT = 0x00; // TODO: MASK LATER -- Do not mask faults during debug.
 
-constexpr int MAX31856_DEBUG_SAMPLES = 5;
+constexpr int MAX31856_DEBUG_SAMPLES = 1;
 constexpr uint32_t MAX31856_DEBUG_SAMPLE_DELAY_MS = 10;
 
 constexpr bool MAX31856_OUTPUT_IN_C_DEFAULT = true;
@@ -122,11 +122,14 @@ void MAX31856Task::Run(void* pvParams)
 {
     (void)pvParams;
 
+    for (int i = 0; i < MAX31856Task::NUM_SENSORS; ++i) {
+        HAL_GPIO_WritePin(MAX31856_CS_GPIO_PORTS[i], MAX31856_CS_PINS[i], GPIO_PIN_SET);
+    }
+
     auto initializeSensor = [this](int index) -> bool {
         MAX31856Driver* thermo = _thermos[index];
         thermo->Init(&hspi1, MAX31856_CS_GPIO_PORTS[index], MAX31856_CS_PINS[index]);
-
-        const bool cr0Ok = thermo->SetCR0(MAX31856_CR0_INIT);
+        const bool cr0Ok = thermo->SetCR0(MAX31856_REG::CR0_CONV_MODE);
         const bool cr1Ok = thermo->SetCR1(MAX31856_CR1_INIT);
         const bool maskOk = thermo->SetMASK(MAX31856_MASK_INIT);
         if (!cr0Ok || !cr1Ok || !maskOk) {
