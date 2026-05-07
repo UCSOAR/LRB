@@ -14,20 +14,11 @@ extern SPI_HandleTypeDef hspi1;
 
 namespace {
 constexpr int MAX31856_SENSOR_COUNT = MAX31856Task::NUM_SENSORS;
-constexpr int MAX31856_ACTIVE_SENSORS = 1; // TODO:  Debug: only TC1 is active.
+constexpr int MAX31856_ACTIVE_SENSORS = 3; // TODO:  Debug: only TC1 is active.
 MAX31856Driver gMax31856Drivers[MAX31856_SENSOR_COUNT];
 
 constexpr unsigned long MAX31856_REINIT_PERIOD_MS = 1000;
 constexpr unsigned long MAX31856_COMMAND_TIMEOUT_MS = 20;
-
-// Use named regs values.
-/*
-constexpr uint8_t MAX31856_CR0_INIT =
-    MAX31856_REG::CR0_CONV_MODE
-    | MAX31856_REG::CR0_CJ
-    | MAX31856_REG::CR0_FAULT
-    | MAX31856_REG::CR0_FAULTCLR;
-*/
 
 constexpr uint8_t MAX31856_CR0_INIT =
 		MAX31856_REG::CR0_CJ
@@ -98,7 +89,7 @@ bool SendMax31856TaskCommand(uint16_t taskCommand)
  */
 void MAX31856Task::InitTask()
 {
-    // Make sure the task is not already initialized
+    // asser 1 init only
     SOAR_ASSERT(rtTaskHandle == nullptr, "Cannot initialize MAX31856Task twice");
 
     // Start the task
@@ -345,16 +336,16 @@ extern "C" void MAX31856Task_HandleDrdyInterrupt(uint16_t gpioPin)
         cmd.SetTaskCommand(MAX31856_TASK_COMMAND_READ_TC1);
         shouldSend = true;
         gMax31856DrdyCounts[0] = gMax31856DrdyCounts[0] + 1;
-        // ++gMax31856DrdyCounts[0];
+
     } else if (gpioPin == TC2_nReady_Pin) {
         cmd.SetTaskCommand(MAX31856_TASK_COMMAND_READ_TC2);
         shouldSend = true;
         gMax31856DrdyCounts[1] = gMax31856DrdyCounts[1] + 1;
-        // ++gMax31856DrdyCounts[1];
+
     } else if (gpioPin == TC3_nReady_Pin) {
         cmd.SetTaskCommand(MAX31856_TASK_COMMAND_READ_TC3);
         shouldSend = true;
-        // ++gMax31856DrdyCounts[2];
+
         gMax31856DrdyCounts[2] = gMax31856DrdyCounts[2] + 1;
     }
 
