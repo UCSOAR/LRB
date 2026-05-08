@@ -326,6 +326,7 @@ void DebugTask::HandleDebugMessage(const char *msg)
       SOAR_PRINT("fs_test  - Run file system tests\n");
       SOAR_PRINT("fs_log   - Log sample sensor data\n");
       SOAR_PRINT("fs_cleanup - Run file system cleanup\n");
+      SOAR_PRINT("top [q] - Enable / *Q*uit Profiler\n");
       SOAR_PRINT("h        - Show this help\n\n");
       break;
     default:
@@ -335,9 +336,9 @@ void DebugTask::HandleDebugMessage(const char *msg)
   }
 
 #if (configGENERATE_RUN_TIME_STATS == 1)  // enable profiling commands if profiling enabled
-  if (strcmp(msg, "profile") == 0) {
-	profileSystem = true;
-  } else if (strcmp(msg, "stop profiling") == 0) {
+  if (strcmp(msg, "top") == 0) {
+    profileSystem = true;
+  } else if (strcmp(msg, "top q") == 0) {
 	profileSystem = false;
   }
 #endif
