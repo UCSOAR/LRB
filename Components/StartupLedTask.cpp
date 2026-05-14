@@ -8,7 +8,7 @@
 #include "main.h"
 
 namespace {
-constexpr uint32_t TASK2_STARTUP_STEP_MS = 120;
+constexpr uint32_t LED_TASK_STARTUP_STEP_MS = 120;
 
 inline void SetDebugLeds(bool on)
 {
@@ -59,9 +59,9 @@ void StartupLedTask::InitTask()
     BaseType_t rtValue =
         xTaskCreate((TaskFunction_t)StartupLedTask::RunTask,
             (const char*)"StartupLedTask",
-            (uint16_t)TASK2_STACK_DEPTH_WORDS,
+            (uint16_t)LED_TASK_STACK_DEPTH_WORDS,
             (void*)this,
-            (UBaseType_t)TASK2_RTOS_PRIORITY,
+            (UBaseType_t)LED_TASK_RTOS_PRIORITY,
             (TaskHandle_t*)&rtTaskHandle);
 
     // Ensure creation succeeded
@@ -80,11 +80,11 @@ void StartupLedTask::Run(void * pvParams)
     SetDebugLeds(false);
 
     LL_GPIO_SetOutputPin(Debug_led1_GPIO_Port, Debug_led1_Pin);
-    vTaskDelay(pdMS_TO_TICKS(TASK2_STARTUP_STEP_MS));
+    vTaskDelay(pdMS_TO_TICKS(LED_TASK_STARTUP_STEP_MS));
     LL_GPIO_SetOutputPin(Debug_led2_GPIO_Port, Debug_led2_Pin);
-    vTaskDelay(pdMS_TO_TICKS(TASK2_STARTUP_STEP_MS));
+    vTaskDelay(pdMS_TO_TICKS(LED_TASK_STARTUP_STEP_MS));
     LL_GPIO_SetOutputPin(Debug_led3_GPIO_Port, Debug_led3_Pin);
-    vTaskDelay(pdMS_TO_TICKS(TASK2_STARTUP_STEP_MS));
+    vTaskDelay(pdMS_TO_TICKS(LED_TASK_STARTUP_STEP_MS));
 
     // System started: debug LEDs off, external LEDs on.
     SetDebugLeds(false);

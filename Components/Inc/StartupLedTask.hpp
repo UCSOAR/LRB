@@ -37,7 +37,7 @@ protected:
     void HandleCommand(Command& cm);
 
 private:
-    StartupLedTask() : Task(TASK2_QUEUE_DEPTH_OBJS) {}
+    StartupLedTask() : Task(LED_TASK_QUEUE_DEPTH_OBJS) {}
     StartupLedTask(const StartupLedTask&);
     StartupLedTask& operator=(const StartupLedTask&);
 };

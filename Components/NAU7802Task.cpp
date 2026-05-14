@@ -24,7 +24,16 @@ constexpr unsigned long NAU7802_COMMAND_TIMEOUT_MS = 20;
 constexpr bool NAU7802_OUTPUT_IN_KG_DEFAULT = false;
 
 // System-specific scale factors. Tune with a known mass calibration.
-constexpr long NAU7802_COUNTS_PER_KG = 100000;
+constexpr long NAU7802_COUNTS_PER_KG = 1000;
+
+// DRDY polarity: set true if DRDY is active-low, false if active-high.
+constexpr bool NAU7802_DRDY_ACTIVE_LOW = false;
+
+bool IsDrdyAsserted(GPIO_TypeDef* port, uint16_t pin)
+{
+    const bool levelHigh = (HAL_GPIO_ReadPin(port, pin) == GPIO_PIN_SET);
+    return NAU7802_DRDY_ACTIVE_LOW ? !levelHigh : levelHigh;
+}
 
 const char* GainToString(uint8_t gain)
 {
@@ -52,7 +61,7 @@ const char* GainToString(uint8_t gain)
 }
 
 NAU7802Task::NAU7802Task()
-    : Task(TASK1_QUEUE_DEPTH_OBJS),
+    : Task(NAU_TASK_QUEUE_DEPTH_OBJS),
       _i2cWrapper(&hi2c3),
       _adc(&_i2cWrapper),
       _enableReading(true),
@@ -77,9 +86,9 @@ void NAU7802Task::InitTask()
     BaseType_t rtValue =
         xTaskCreate((TaskFunction_t)NAU7802Task::RunTask,
             (const char*)"NAU7802Task",
-            (uint16_t)TASK1_STACK_DEPTH_WORDS,
+            (uint16_t)NAU_TASK_STACK_DEPTH_WORDS,
             (void*)this,
-            (UBaseType_t)TASK1_RTOS_PRIORITY,
+            (UBaseType_t)NAU_TASK_RTOS_PRIORITY,
             (TaskHandle_t*)&rtTaskHandle);
 
     // Ensure creation succeeded
@@ -133,7 +142,7 @@ void NAU7802Task::PrintStatus()
 void NAU7802Task::PrintDrdy()
 {
     uint8_t ctrl1 = 0;
-    const bool pinAsserted = (HAL_GPIO_ReadPin(LC1_DRDY_GPIO_Port, LC1_DRDY_Pin) == GPIO_PIN_SET);
+    const bool pinAsserted = IsDrdyAsserted(LC1_DRDY_GPIO_Port, LC1_DRDY_Pin);
     const bool readyBit = _adc.isReady();
     if (_i2cWrapper.readByte(NAU7802_I2C_ADDRESS, NAU7802_REG_CTRL1, &ctrl1)) {
         SOAR_PRINT("NAU7802Task - DRDY pin=%d ready=%d CTRL1=0x%02X gain=%s\n",
@@ -162,7 +171,7 @@ void NAU7802Task::Run(void * pvParams)
 
 
     auto initializeSensor = [this]() -> bool {
-        if (_adc.begin(NAU7802_GAIN_128X) != NauStatus::OK) {
+        if (_adc.begin(NAU7802_GAIN_64X) != NauStatus::OK) {
             SOAR_PRINT("NAU7802Task - NAU7802 init failed, retrying\n");
             return false;
         }
@@ -196,7 +205,7 @@ void NAU7802Task::Run(void * pvParams)
         if (_sensorReady && _enableReading && ((now - lastSampleTick) >= pdMS_TO_TICKS(NAU7802_SAMPLE_PERIOD_MS))) {
             
             // Check if DRDY pin is asserted or device reports ready
-            const bool pinSet = (HAL_GPIO_ReadPin(LC1_DRDY_GPIO_Port, LC1_DRDY_Pin) == GPIO_PIN_SET);
+            const bool pinSet = IsDrdyAsserted(LC1_DRDY_GPIO_Port, LC1_DRDY_Pin);
             const bool deviceReady = _adc.isReady();
 
             if (pinSet || deviceReady) {
@@ -352,6 +361,87 @@ void NAU7802Task::HandleCommand(Command& cm)
                     SOAR_PRINT("  Reg 0x%02X = READ_ERR\n", regs[i]);
                 }
             }
+            break;
+        }
+        case NAUTASK_COMMAND_NAU_BUSCHK:
+        {
+            SOAR_PRINT("NAU7802Task - Bus check start\n");
+
+            const int initialScl = (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8) == GPIO_PIN_SET) ? 1 : 0;
+            const int initialSda = (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_9) == GPIO_PIN_SET) ? 1 : 0;
+            SOAR_PRINT("NAU7802Task - Bus check initial SCL=%d SDA=%d\n", initialScl, initialSda);
+
+            (void)HAL_I2C_DeInit(&hi2c3);
+
+            GPIO_InitTypeDef gpio = {0};
+            __HAL_RCC_GPIOC_CLK_ENABLE();
+
+            gpio.Pin = GPIO_PIN_8;
+            gpio.Mode = GPIO_MODE_OUTPUT_PP;
+            gpio.Pull = GPIO_NOPULL;
+            gpio.Speed = GPIO_SPEED_FREQ_LOW;
+            HAL_GPIO_Init(GPIOC, &gpio);
+
+            SOAR_PRINT("NAU7802Task - Bus check toggling PC8\n");
+            for (int i = 0; i < 8; ++i) {
+                HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
+                vTaskDelay(pdMS_TO_TICKS(20));
+            }
+
+            gpio.Pin = GPIO_PIN_9;
+            gpio.Mode = GPIO_MODE_OUTPUT_PP;
+            gpio.Pull = GPIO_NOPULL;
+            gpio.Speed = GPIO_SPEED_FREQ_LOW;
+            HAL_GPIO_Init(GPIOC, &gpio);
+
+            SOAR_PRINT("NAU7802Task - Bus check toggling PC9\n");
+            for (int i = 0; i < 8; ++i) {
+                HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
+                vTaskDelay(pdMS_TO_TICKS(20));
+            }
+
+            hi2c3.Instance = I2C3;
+            if (HAL_I2C_Init(&hi2c3) != HAL_OK) {
+                SOAR_PRINT("NAU7802Task - Bus check HAL_I2C_Init failed\n");
+            }
+            (void)HAL_I2CEx_ConfigAnalogFilter(&hi2c3, I2C_ANALOGFILTER_ENABLE);
+            (void)HAL_I2CEx_ConfigDigitalFilter(&hi2c3, 0);
+
+            int ack54 = 0;
+            int ack56 = 0;
+            HAL_StatusTypeDef s54 = HAL_ERROR;
+            HAL_StatusTypeDef s56 = HAL_ERROR;
+
+            SOAR_PRINT("NAU7802Task - Bus check probing 0x54 and 0x56\n");
+            for (int i = 0; i < 25; ++i) {
+                s54 = HAL_I2C_IsDeviceReady(&hi2c3, (0x2A << 1), 1, 5);
+                s56 = HAL_I2C_IsDeviceReady(&hi2c3, (0x2B << 1), 1, 5);
+                if (s54 == HAL_OK) {
+                    ++ack54;
+                }
+                if (s56 == HAL_OK) {
+                    ++ack56;
+                }
+                vTaskDelay(pdMS_TO_TICKS(10));
+            }
+
+            const unsigned long state = (unsigned long)HAL_I2C_GetState(&hi2c3);
+            const unsigned long err = (unsigned long)HAL_I2C_GetError(&hi2c3);
+            const unsigned long isr = (unsigned long)I2C3->ISR;
+            const int finalScl = (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8) == GPIO_PIN_SET) ? 1 : 0;
+            const int finalSda = (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_9) == GPIO_PIN_SET) ? 1 : 0;
+
+            SOAR_PRINT("NAU7802Task - Bus check done last54=%d last56=%d ack54=%d ack56=%d state=%lu err=0x%08lX ISR=0x%08lX scl=%d sda=%d\n",
+                       (int)s54,
+                       (int)s56,
+                       ack54,
+                       ack56,
+                       state,
+                       err,
+                       isr,
+                       finalScl,
+                       finalSda);
+
             break;
         }
         case NAUTASK_COMMAND_NAU_TARE:

@@ -14,7 +14,7 @@ extern SPI_HandleTypeDef hspi1;
 
 namespace {
 constexpr int MAX31856_SENSOR_COUNT = MAX31856Task::NUM_SENSORS;
-constexpr int MAX31856_ACTIVE_SENSORS = 3; // TODO:  Debug: only TC1 is active.
+constexpr int MAX31856_ACTIVE_SENSORS = 2; // TODO:  Debug: only TC1 is active.
 MAX31856Driver gMax31856Drivers[MAX31856_SENSOR_COUNT];
 
 constexpr unsigned long MAX31856_REINIT_PERIOD_MS = 1000;
@@ -39,6 +39,7 @@ GPIO_TypeDef* const MAX31856_CS_GPIO_PORTS[MAX31856_SENSOR_COUNT] = {
     TC1_cs_GPIO_Port,
     TC2_cs_GPIO_Port,
     TC3_cs_GPIO_Port
+	// ADD more ports if you need
 };
 
 const uint16_t MAX31856_CS_PINS[MAX31856_SENSOR_COUNT] = {
@@ -67,7 +68,7 @@ float celsiusToFahrenheit(float tempC) {
 }
 
 MAX31856Task::MAX31856Task()
-    : Task(TASK1_QUEUE_DEPTH_OBJS),
+    : Task(MAX_TASK_QUEUE_DEPTH_OBJS),
             _enableLogging(true),
             _outputInC(MAX31856_OUTPUT_IN_C_DEFAULT)
 {
@@ -96,9 +97,9 @@ void MAX31856Task::InitTask()
     BaseType_t rtValue =
         xTaskCreate((TaskFunction_t)MAX31856Task::RunTask,
             (const char*)"MAX31856Task",
-            (uint16_t)TASK1_STACK_DEPTH_WORDS,
+            (uint16_t)MAX_TASK_STACK_DEPTH_WORDS,
             (void*)this,
-            (UBaseType_t)TASK1_RTOS_PRIORITY,
+            (UBaseType_t)MAX_TASK_RTOS_PRIORITY,
             (TaskHandle_t*)&rtTaskHandle);
 
     // Ensure creation
@@ -331,24 +332,24 @@ extern "C" void MAX31856Task_HandleDrdyInterrupt(uint16_t gpioPin)
 {
     Command cmd(DATA_COMMAND, MAX31856_TASK_COMMAND_NONE);
     bool shouldSend = false;
-
+    
     if (gpioPin == TC1_nReady_Pin) {
         cmd.SetTaskCommand(MAX31856_TASK_COMMAND_READ_TC1);
         shouldSend = true;
         gMax31856DrdyCounts[0] = gMax31856DrdyCounts[0] + 1;
-
+        
     } else if (gpioPin == TC2_nReady_Pin) {
         cmd.SetTaskCommand(MAX31856_TASK_COMMAND_READ_TC2);
         shouldSend = true;
         gMax31856DrdyCounts[1] = gMax31856DrdyCounts[1] + 1;
-
+        
     } else if (gpioPin == TC3_nReady_Pin) {
         cmd.SetTaskCommand(MAX31856_TASK_COMMAND_READ_TC3);
         shouldSend = true;
-
+        
         gMax31856DrdyCounts[2] = gMax31856DrdyCounts[2] + 1;
     }
-
+    
     if (shouldSend) {
         MAX31856Task::Inst().GetEventQueue()->SendFromISR(cmd);
     }

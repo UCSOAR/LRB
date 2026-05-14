@@ -38,7 +38,7 @@ protected:
 	void HandleCommand(Command& cm);
 
 private:
-	AnemometerTask() : Task(TASK1_QUEUE_DEPTH_OBJS), _enableReading(true) {}
+	AnemometerTask() : Task(ANEM_TASK_QUEUE_DEPTH_OBJS), _enableReading(true) {}
 	AnemometerTask(const AnemometerTask&);
 	AnemometerTask& operator=(const AnemometerTask&);
 

@@ -30,9 +30,9 @@ void AnemometerTask::InitTask()
 	BaseType_t rtValue =
 		xTaskCreate((TaskFunction_t)AnemometerTask::RunTask,
 			(const char*)"AnemometerTask",
-			(uint16_t)TASK1_STACK_DEPTH_WORDS,
+			(uint16_t)ANEM_TASK_STACK_DEPTH_WORDS,
 			(void*)this,
-			(UBaseType_t)TASK1_RTOS_PRIORITY,
+			(UBaseType_t)ANEM_TASK_RTOS_PRIORITY,
 			(TaskHandle_t*)&rtTaskHandle);
 
 	SOAR_ASSERT(rtValue == pdPASS, "AnemometerTask::InitTask() - xTaskCreate() failed");

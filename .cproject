@@ -407,7 +407,7 @@
 					</folderInfo>
 					<sourceEntries>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Components/SoarDebug"/>
-						<entry excluding="adafruit_implementation_nau.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="SoarDrivers/NAU7802"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="SoarDrivers/NAU7802"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="SoarDrivers/MAX31856MUD+"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Middlewares"/>

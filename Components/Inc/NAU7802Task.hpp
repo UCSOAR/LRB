@@ -8,10 +8,9 @@
 #define COMPONENTS_NAU7802_TASK_HPP_
 
 /* Includes ------------------------------------------------------------------*/
+#include <i2c_wrapper.hpp>
+#include <NAU7802.hpp>
 #include "SystemDefines.hpp"
-#include "NAU7802.hpp"
-#include "i2c_wrapper.hpp"
-
 #include "../../SoarOS/Core/Inc/Task.hpp"
 
 /* Macros ------------------------------------------------------------------*/
@@ -34,6 +33,7 @@ enum NAUTASK_COMMANDS {
     NAUTASK_COMMAND_NAU_SET_GAIN_4X,
     NAUTASK_COMMAND_NAU_SET_GAIN_8X,
     NAUTASK_COMMAND_NAU_SET_GAIN_128,
+    NAUTASK_COMMAND_NAU_BUSCHK,
     NAUTASK_COMMAND_MAX
 };
 

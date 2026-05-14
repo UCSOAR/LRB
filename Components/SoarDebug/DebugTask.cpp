@@ -18,16 +18,8 @@
 #include "../../SoarOS/Core/Inc/Command.hpp"
 #include "../../SoarOS/Core/Inc/CubeUtils.hpp"
 
-#include "../../SoarOS/Profiler/ProfilerTask.hpp"
+#include "../../SoarOS/Profiler/TopTask.hpp"
 #include "../Inc/BuzzerTask.hpp"
-
-// Promise to the linker that this variable exists elsewhere
-// extern ProfilerTask profileSystem;
-
-
-//TODO: PROFILING 2
-
-
 // External Tasks (to send debug commands to)
 
 /* Macros --------------------------------------------------------------------*/
@@ -173,9 +165,12 @@ void DebugTask::HandleDebugMessage(const char *msg)
     } else if (strcmp(lowerMsg, "nau gain 128x") == 0) {
       Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_SET_GAIN_128);
       NAU7802Task::Inst().GetEventQueue()->Send(cmd);
+    } else if (strcmp(lowerMsg, "nau buschk") == 0) {
+      Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_BUSCHK);
+      NAU7802Task::Inst().GetEventQueue()->Send(cmd);
     } else {
       SOAR_PRINT("Debug: Unsupported command: %s\n", cleanMsg);
-      SOAR_PRINT("Debug: Use nau [status|drdy|regs|read|tare|baseline|log on|log off|gain 1x|gain 2x|gain 4x|gain 8x|gain 128x|on|off|toggle]\n");
+      SOAR_PRINT("Debug: Use nau [status|drdy|regs|read|tare|baseline|buschk|log on|log off|gain 1x|gain 2x|gain 4x|gain 8x|gain 128x|on|off|toggle]\n");
       debugMsgIdx = 0;
       isDebugMsgReady = false;
       return;
@@ -256,7 +251,7 @@ void DebugTask::HandleDebugMessage(const char *msg)
   {
     Command cmd(DATA_COMMAND, BUZZER_TASK_COMMAND_PLAY_BOMB_SOUND);
     BuzzerTask::Inst().GetEventQueue()->Send(cmd);
-    SOAR_PRINT("Debug: Bomb sound initiated\n");
+    SOAR_PRINT("Debug: Bomb has been planted\n");
     debugMsgIdx = 0;
     isDebugMsgReady = false;
     return;
@@ -320,13 +315,14 @@ void DebugTask::HandleDebugMessage(const char *msg)
       SOAR_PRINT("\n-- DEBUG COMMANDS --\n");
       SOAR_PRINT("sysinfo  - System information\n");
       SOAR_PRINT("sysreset - System reset\n");
-      SOAR_PRINT("NAU [status|drdy|regs|read|tare|baseline|log on|log off|gain 1x|gain 2x|gain 4x|gain 8x|gain 128x|on|off|toggle] - NAU7802 controls\n");
+      SOAR_PRINT("NAU [status|drdy|regs|read|tare|baseline|buschk|log on|log off|gain 1x|gain 2x|gain 4x|gain 8x|gain 128x|on|off|toggle] - NAU7802 controls\n");
       SOAR_PRINT("MAX [on|off|toggle|status|read|regs|cs] - MAX31856 controls\n");
       SOAR_PRINT("route [debug|fsb]");
       SOAR_PRINT("fs_test  - Run file system tests\n");
       SOAR_PRINT("fs_log   - Log sample sensor data\n");
       SOAR_PRINT("fs_cleanup - Run file system cleanup\n");
-      SOAR_PRINT("top [q] - Enable / *Q*uit Profiler\n");
+      SOAR_PRINT("top - Enable task monitor\n");
+      SOAR_PRINT("top q - Disable task monitor\n");
       SOAR_PRINT("h        - Show this help\n\n");
       break;
     default:
@@ -337,9 +333,9 @@ void DebugTask::HandleDebugMessage(const char *msg)
 
 #if (configGENERATE_RUN_TIME_STATS == 1)  // enable profiling commands if profiling enabled
   if (strcmp(msg, "top") == 0) {
-    profileSystem = true;
+    TopTask::Inst().SetEnabled(true);
   } else if (strcmp(msg, "top q") == 0) {
-	profileSystem = false;
+	TopTask::Inst().SetEnabled(false);
   }
 #endif
 

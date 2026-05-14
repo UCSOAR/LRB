@@ -87,21 +87,6 @@ void StartDefaultTask(void const * argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-/*
-static void Debug_USART2_DirectTx(const char* s)
-{
-  if (s == NULL) {
-    return;
-  }
-
-  while (*s != '\0') {
-    LL_USART_TransmitData8(USART2, (uint8_t)*s++);
-    while (!LL_USART_IsActiveFlag_TXE(USART2)) {}
-  }
-  while (!LL_USART_IsActiveFlag_TC(USART2)) {}
-}
-*/
 /* USER CODE END 0 */
 
 /**
@@ -144,7 +129,6 @@ int main(void)
   MX_CRC_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-  //Debug_USART2_DirectTx("\r\n[BOOT] USART2 direct TX OK\r\n");
 #if (configGENERATE_RUN_TIME_STATS == 1)
 MX_TIM3_Init();		// Replace TIM2 with your selected timer
 #endif
@@ -772,6 +756,9 @@ static void MX_GPIO_Init(void)
   LL_GPIO_ResetOutputPin(Debug_led3_GPIO_Port, Debug_led3_Pin);
 
   /**/
+  LL_GPIO_ResetOutputPin(TC3_cs_GPIO_Port, TC3_cs_Pin);
+
+  /**/
   LL_GPIO_ResetOutputPin(Ext_ind_led1_GPIO_Port, Ext_ind_led1_Pin);
 
   /**/
@@ -854,7 +841,9 @@ static void MX_GPIO_Init(void)
 
   /**/
   GPIO_InitStruct.Pin = TC3_cs_Pin;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   LL_GPIO_Init(TC3_cs_GPIO_Port, &GPIO_InitStruct);
 

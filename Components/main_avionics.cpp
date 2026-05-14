@@ -7,18 +7,17 @@
 */
 /* Includes -----------------------------------------------------------------*/
 #include <MAX31856Task.hpp>
-#include <NAU7802Task.hpp>
 #include <AnemometerTask.hpp>
 #include <StartupLedTask.hpp>
 #include <BuzzerTask.hpp>
+#include <NAU7802Task.hpp>
 #include "SystemDefines.hpp"
 #include "DebugTask.hpp"
 
 #include "../SoarOS/CubeTask.hpp"
 #include "../SoarOS/Drivers/Inc/UARTDriver.hpp"
 
-// TODO: PROFILING 3
-#include "ProfilerTask.hpp"
+#include "TopTask.hpp"
 
 #include "stm32g4xx_hal_def.h"
 #include "stm32g4xx_hal_gpio.h"
@@ -78,7 +77,7 @@ void run_main()
 
 
 #if (configGENERATE_RUN_TIME_STATS == 1)
-  ProfilerTask::Inst().InitTask();
+  TopTask::Inst().InitTask();
 #endif
 
   // Print System Boot Info : Warning, don't queue more than 10 prints before
@@ -102,7 +101,7 @@ void run_main()
 
   while (1)
   {
-    osDelay(100);
+    vTaskDelay(pdMS_TO_TICKS(100));
     HAL_NVIC_SystemReset();
   }
 }

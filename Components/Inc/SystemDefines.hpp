@@ -48,12 +48,12 @@ constexpr uint8_t TASK_DEBUG_PRIORITY = 2;             // Priority of the debug 
 constexpr uint8_t TASK_DEBUG_QUEUE_DEPTH_OBJS = 10;    // Size of the debug task queue
 constexpr uint16_t TASK_DEBUG_STACK_DEPTH_WORDS = 512; // Size of the debug task stack
 
-// FILESYSTEM TASK
-constexpr uint8_t TASK_FILESYSTEM_TASK_PRIORITY = 3;         // Priority of the filesystem task
-constexpr uint8_t TASK_FILESYSTEM_QUEUE_DEPTH_OBJS = 8;      // Size of the filesystem task queue
-constexpr uint16_t TASK_FILESYSTEM_STACK_DEPTH_WORDS = 1024; // Size of the filesystem task stack
-constexpr uint32_t FILESYSTEM_TASK_QUEUE_TIMEOUT_MS = 100;   // Queue timeout for filesystem task
-constexpr uint32_t FILESYSTEM_TASK_LOOP_DELAY_MS = 1000;     // Main loop delay for filesystem task
+// FILESYSTEM (virus) TASK
+// constexpr uint8_t TASK_FILESYSTEM_TASK_PRIORITY = 3;         // Priority of the filesystem task
+// constexpr uint8_t TASK_FILESYSTEM_QUEUE_DEPTH_OBJS = 8;      // Size of the filesystem task queue
+// constexpr uint16_t TASK_FILESYSTEM_STACK_DEPTH_WORDS = 1024; // Size of the filesystem task stack
+// constexpr uint32_t FILESYSTEM_TASK_QUEUE_TIMEOUT_MS = 100;   // Queue timeout for filesystem task
+// constexpr uint32_t FILESYSTEM_TASK_LOOP_DELAY_MS = 1000;     // Main loop delay for filesystem task
 
 // TODO: PROFILER 4
 // Profiler task
@@ -61,19 +61,34 @@ constexpr uint8_t TASK_PROFILER_PRIORITY = 3;  // Priority of the profiler task
 constexpr uint8_t TASK_PROFILER_QUEUE_DEPTH_OBJS =10;  // Size of the profiler task queue
 constexpr uint16_t TASK_PROFILER_STACK_DEPTH_WORDS =512;  // Size of the profiler task stack
 
-// TASK 1
-constexpr uint8_t TASK1_RTOS_PRIORITY = 2;        // Priority of Task 1
-constexpr uint8_t TASK1_QUEUE_DEPTH_OBJS = 10;    // Size of Task 1 queue
-constexpr uint16_t TASK1_STACK_DEPTH_WORDS = 512; // Size of Task 1 stack
+// TOP TASK
+constexpr uint8_t TASK_TOP_PRIORITY = 3;  // Priority of the top task
+constexpr uint8_t TASK_TOP_QUEUE_DEPTH_OBJS = 10;  // Size of the top task queue
+constexpr uint16_t TASK_TOP_STACK_DEPTH_WORDS = 512;  // Size of the top task stack
 
-// TASK 2
-constexpr uint8_t TASK2_RTOS_PRIORITY = 2;        // Priority of Task 2
-constexpr uint8_t TASK2_QUEUE_DEPTH_OBJS = 10;    // Size of Task 2 queue
-constexpr uint16_t TASK2_STACK_DEPTH_WORDS = 512; // Size of Task 2 stack
+// ANEM TASK
+constexpr uint8_t ANEM_TASK_RTOS_PRIORITY = 2;        // Priority of ANEM TASK
+constexpr uint8_t ANEM_TASK_QUEUE_DEPTH_OBJS = 10;    // Size of ANEM TASK queue
+constexpr uint16_t ANEM_TASK_STACK_DEPTH_WORDS = 512; // Size of ANEM TASK stack
+
+// LED TASK
+constexpr uint8_t LED_TASK_RTOS_PRIORITY = 2;        // Priority of Task 2
+constexpr uint8_t LED_TASK_QUEUE_DEPTH_OBJS = 10;    // Size of Task 2 queue
+constexpr uint16_t LED_TASK_STACK_DEPTH_WORDS = 512; // Size of Task 2 stack
 
 // BUZZER TASK
 constexpr uint8_t TASK_BUZZER_RTOS_PRIORITY = 2;        // Priority of the buzzer task
 constexpr uint8_t TASK_BUZZER_QUEUE_DEPTH_OBJS = 10;    // Size of the buzzer task queue
 constexpr uint16_t TASK_BUZZER_STACK_DEPTH_WORDS = 512; // Size of the buzzer task stack
+
+// MAX TASK
+constexpr uint8_t MAX_TASK_RTOS_PRIORITY = 2;        // Priority of Task 2
+constexpr uint8_t MAX_TASK_QUEUE_DEPTH_OBJS = 10;    // Size of Task 2 queue
+constexpr uint16_t MAX_TASK_STACK_DEPTH_WORDS = 1024; // Size of Task 2 stack
+
+// NAU TASK
+constexpr uint8_t NAU_TASK_RTOS_PRIORITY = 2;        // Priority of Task 2
+constexpr uint8_t NAU_TASK_QUEUE_DEPTH_OBJS = 10;    // Size of Task 2 queue
+constexpr uint16_t NAU_TASK_STACK_DEPTH_WORDS = 512; // Size of Task 2 stack
 
 #endif // CUBE_MAIN_SYSTEM_DEFINES_H
