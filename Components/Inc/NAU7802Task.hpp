@@ -8,8 +8,7 @@
 #define COMPONENTS_NAU7802_TASK_HPP_
 
 /* Includes ------------------------------------------------------------------*/
-#include <i2c_wrapper.hpp>
-#include <NAU7802.hpp>
+#include <NAU7802.h>
 #include "SystemDefines.hpp"
 #include "../../SoarOS/Core/Inc/Task.hpp"
 
@@ -25,15 +24,14 @@ enum NAUTASK_COMMANDS {
     NAUTASK_COMMAND_NAU_READ,
     NAUTASK_COMMAND_NAU_READ_ISR,
     NAUTASK_COMMAND_NAU_DRDY,
-    NAUTASK_COMMAND_NAU_DUMP_REGS,
-    NAUTASK_COMMAND_NAU_TARE,
-    NAUTASK_COMMAND_NAU_BASELINE,
     NAUTASK_COMMAND_NAU_SET_GAIN_1X,
     NAUTASK_COMMAND_NAU_SET_GAIN_2X,
     NAUTASK_COMMAND_NAU_SET_GAIN_4X,
     NAUTASK_COMMAND_NAU_SET_GAIN_8X,
     NAUTASK_COMMAND_NAU_SET_GAIN_128,
-    NAUTASK_COMMAND_NAU_BUSCHK,
+    NAUTASK_COMMAND_NAU_TARE,
+    NAUTASK_COMMAND_NAU_CAL_500G,
+    NAUTASK_COMMAND_NAU_CAL_1000G,
     NAUTASK_COMMAND_MAX
 };
 
@@ -66,18 +64,23 @@ private:
     NAU7802Task(const NAU7802Task&);
     NAU7802Task& operator=(const NAU7802Task&);
 
-    I2C_Wrapper _i2cWrapper;
-    NAU7802 _adc;
+    Adafruit_NAU7802 _adc;
 
     bool _enableReading;
     bool _enableLogging;
     bool _sensorReady;
-    bool _outputInKg;
-    long _tareCounts;
-    bool _baselineRunning;
-    unsigned int _baselineSamples;
-    long long rawToMilliKg(long rawReading) const;
-    long long milliKgToMilliLb(long long milliKg) const;
+    float _emaAlpha;
+    float _emaValue;
+    bool _emaInitialized;
+    bool _calibHave500g;
+    bool _calibHave1000g;
+    int32_t _calibRaw500g;
+    int32_t _calibRaw1000g;
+    float _calibSlopeGPerCount;
+    float _calibOffsetG;
+    bool _calibValid;
+    float _tareGrams;
+    bool _tareValid;
 };
 
 #endif /* COMPONENTS_NAU7802_TASK_HPP_ */

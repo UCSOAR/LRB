@@ -1,12 +1,10 @@
 /*
  * NAU7802Task.cpp
  *
- * Reads the NAU7802 ADC and prints raw samples
+ * Polls the NAU7802 ADC and prints raw samples when logging is enabled.
  */
 
 #include <NAU7802Task.hpp>
-#include <chrono>
-#include <cmath>
 
 extern "C" {
 #include "main.h"
@@ -19,64 +17,166 @@ namespace {
 constexpr unsigned long NAU7802_SAMPLE_PERIOD_MS = 100;
 constexpr unsigned long NAU7802_REINIT_PERIOD_MS = 1000;
 constexpr unsigned long NAU7802_COMMAND_TIMEOUT_MS = 20;
+constexpr float NAU7802_EMA_ALPHA_DEFAULT = 0.1f;
+constexpr uint8_t NAU7802_CAL_SAMPLES = 8;
+constexpr float NAU7802_LB_PER_G = 0.00220462262f;
+constexpr int32_t NAU7802_STABILITY_COUNTS = 5000;
 
-// Output unit selection default: false = pounds, true = kilograms.
-constexpr bool NAU7802_OUTPUT_IN_KG_DEFAULT = false;
-
-// System-specific scale factors. Tune with a known mass calibration.
-constexpr long NAU7802_COUNTS_PER_KG = 1000;
-
-// DRDY polarity: set true if DRDY is active-low, false if active-high.
-constexpr bool NAU7802_DRDY_ACTIVE_LOW = false;
-
-bool IsDrdyAsserted(GPIO_TypeDef* port, uint16_t pin)
+const char* LdoToString(NAU7802_LDOVoltage ldo)
 {
-    const bool levelHigh = (HAL_GPIO_ReadPin(port, pin) == GPIO_PIN_SET);
-    return NAU7802_DRDY_ACTIVE_LOW ? !levelHigh : levelHigh;
+    switch (ldo) {
+    case NAU7802_4V5:
+        return "4.5V";
+    case NAU7802_4V2:
+        return "4.2V";
+    case NAU7802_3V9:
+        return "3.9V";
+    case NAU7802_3V6:
+        return "3.6V";
+    case NAU7802_3V3:
+        return "3.3V";
+    case NAU7802_3V0:
+        return "3.0V";
+    case NAU7802_2V7:
+        return "2.7V";
+    case NAU7802_2V4:
+        return "2.4V";
+    case NAU7802_EXTERNAL:
+        return "External";
+    default:
+        return "Unknown";
+    }
 }
 
-const char* GainToString(uint8_t gain)
+const char* GainToString(NAU7802_Gain gain)
 {
-    switch (gain & 0x07) {
-    case NAU7802_GAIN_1X:
+    switch (gain) {
+    case NAU7802_GAIN_1:
         return "1x";
-    case NAU7802_GAIN_2X:
+    case NAU7802_GAIN_2:
         return "2x";
-    case NAU7802_GAIN_4X:
+    case NAU7802_GAIN_4:
         return "4x";
-    case NAU7802_GAIN_8X:
+    case NAU7802_GAIN_8:
         return "8x";
-    case NAU7802_GAIN_16X:
+    case NAU7802_GAIN_16:
         return "16x";
-    case NAU7802_GAIN_32X:
+    case NAU7802_GAIN_32:
         return "32x";
-    case NAU7802_GAIN_64X:
+    case NAU7802_GAIN_64:
         return "64x";
-    case NAU7802_GAIN_128X:
+    case NAU7802_GAIN_128:
         return "128x";
     default:
-        return "unknown";
+        return "Unknown";
     }
+}
+
+const char* RateToString(NAU7802_SampleRate rate)
+{
+    switch (rate) {
+    case NAU7802_RATE_10SPS:
+        return "10 SPS";
+    case NAU7802_RATE_20SPS:
+        return "20 SPS";
+    case NAU7802_RATE_40SPS:
+        return "40 SPS";
+    case NAU7802_RATE_80SPS:
+        return "80 SPS";
+    case NAU7802_RATE_320SPS:
+        return "320 SPS";
+    default:
+        return "Unknown";
+    }
+}
+
+void UpdateEma(float alpha, int32_t raw, float *ema, bool *initialized)
+{
+    if (ema == nullptr || initialized == nullptr) {
+        return;
+    }
+
+    const float rawF = static_cast<float>(raw);
+    if (!*initialized) {
+        *ema = rawF;
+        *initialized = true;
+        return;
+    }
+
+    *ema = (alpha * rawF) + ((1.0f - alpha) * (*ema));
+}
+
+bool ReadStableAverage(Adafruit_NAU7802 &adc, uint8_t samples, int32_t *outRaw,
+                       int32_t *outSpread)
+{
+    if (outRaw == nullptr || samples == 0) {
+        return false;
+    }
+
+    long long sum = 0;
+    int32_t minVal = 0;
+    int32_t maxVal = 0;
+    for (uint8_t i = 0; i < samples; ++i) {
+        while (!adc.available()) {
+            vTaskDelay(pdMS_TO_TICKS(1));
+        }
+        const int32_t sample = adc.read();
+        if (i == 0) {
+            minVal = sample;
+            maxVal = sample;
+        } else {
+            if (sample < minVal) {
+                minVal = sample;
+            }
+            if (sample > maxVal) {
+                maxVal = sample;
+            }
+        }
+        sum += static_cast<long long>(sample);
+    }
+
+    const int32_t spread = maxVal - minVal;
+    if (outSpread != nullptr) {
+        *outSpread = spread;
+    }
+    if (spread > NAU7802_STABILITY_COUNTS) {
+        return false;
+    }
+
+    *outRaw = static_cast<int32_t>(sum / samples);
+    return true;
+}
+
+float ComputeWeightGrams(float slopeGPerCount, float offsetG, float emaValue)
+{
+    return (slopeGPerCount * emaValue) + offsetG;
 }
 }
 
 NAU7802Task::NAU7802Task()
     : Task(NAU_TASK_QUEUE_DEPTH_OBJS),
-      _i2cWrapper(&hi2c3),
-      _adc(&_i2cWrapper),
+      _adc(&hi2c3),
       _enableReading(true),
-	_enableLogging(false),
-	_sensorReady(false),
-	_outputInKg(NAU7802_OUTPUT_IN_KG_DEFAULT)
+      _enableLogging(false),
+    _sensorReady(false),
+    _emaAlpha(NAU7802_EMA_ALPHA_DEFAULT),
+    _emaValue(0.0f),
+    _emaInitialized(false),
+    _calibHave500g(false),
+    _calibHave1000g(false),
+    _calibRaw500g(0),
+    _calibRaw1000g(0),
+    _calibSlopeGPerCount(0.0f),
+    _calibOffsetG(0.0f),
+    _calibValid(false),
+    _tareGrams(0.0f),
+    _tareValid(false)
 {
-    _tareCounts = 0;
-    _baselineRunning = false;
-    _baselineSamples = 0;
 }
 
 /**
  * @brief Initializes NAU7802Task with the RTOS scheduler
-*/
+ */
 void NAU7802Task::InitTask()
 {
     // Make sure the task is not already initialized
@@ -125,65 +225,84 @@ void NAU7802Task::SetLoggingEnabled(bool enabled)
 
 void NAU7802Task::PrintStatus()
 {
-    uint8_t ctrl1 = 0;
-    const bool gotCtrl1 = _i2cWrapper.readByte(NAU7802_I2C_ADDRESS, NAU7802_REG_CTRL1, &ctrl1);
-    SOAR_PRINT("NAU7802Task - status read=%s log=%s unit=%s tare=%ld ready=%d drdy=%d\n",
+    const NAU7802_Gain gain = _adc.getGain();
+    const NAU7802_SampleRate rate = _adc.getRate();
+    const NAU7802_LDOVoltage ldo = _adc.getLDO();
+    const bool available = _adc.available();
+
+    SOAR_PRINT("NAU7802Task - status read=%s log=%s ready=%d avail=%d cal=%s tare=%s alpha=%.2f gain=%s rate=%s ldo=%s\n",
                _enableReading ? "ON" : "OFF",
                _enableLogging ? "ON" : "OFF",
-               _outputInKg ? "kg" : "lb",
-               _tareCounts,
-               _adc.isReady() ? 1 : 0,
-               (HAL_GPIO_ReadPin(LC1_DRDY_GPIO_Port, LC1_DRDY_Pin) == GPIO_PIN_SET) ? 1 : 0);
-    if (gotCtrl1) {
-        SOAR_PRINT("NAU7802Task - status CTRL1=0x%02X gain=%s\n", ctrl1, GainToString(ctrl1));
-    }
+               _sensorReady ? 1 : 0,
+               available ? 1 : 0,
+               _calibValid ? "ON" : "OFF",
+               _tareValid ? "ON" : "OFF",
+               static_cast<double>(_emaAlpha),
+               GainToString(gain),
+               RateToString(rate),
+               LdoToString(ldo));
 }
 
 void NAU7802Task::PrintDrdy()
 {
-    uint8_t ctrl1 = 0;
-    const bool pinAsserted = IsDrdyAsserted(LC1_DRDY_GPIO_Port, LC1_DRDY_Pin);
-    const bool readyBit = _adc.isReady();
-    if (_i2cWrapper.readByte(NAU7802_I2C_ADDRESS, NAU7802_REG_CTRL1, &ctrl1)) {
-        SOAR_PRINT("NAU7802Task - DRDY pin=%d ready=%d CTRL1=0x%02X gain=%s\n",
-                   pinAsserted ? 1 : 0,
-                   readyBit ? 1 : 0,
-                   ctrl1,
-                   GainToString(ctrl1));
-    } else {
-        SOAR_PRINT("NAU7802Task - DRDY pin=%d ready=%d CTRL1=READ_ERR\n",
-                   pinAsserted ? 1 : 0,
-                   readyBit ? 1 : 0);
-    }
+    SOAR_PRINT("NAU7802Task - DRDY avail=%d\n", _adc.available() ? 1 : 0);
 }
-
-
-
 
 /**
  * @brief Instance Run loop for NAU7802Task, runs on scheduler start as long as the task is initialized.
  * @param pvParams RTOS Passed void parameters, contains a pointer to the object instance, should not be used
-*/
+ */
 void NAU7802Task::Run(void * pvParams)
 {
     (void)pvParams;
 
-
-
     auto initializeSensor = [this]() -> bool {
-        if (_adc.begin(NAU7802_GAIN_64X) != NauStatus::OK) {
+        if (!_adc.begin(&hi2c3)) {
             SOAR_PRINT("NAU7802Task - NAU7802 init failed, retrying\n");
             return false;
         }
 
         SOAR_PRINT("NAU7802Task - NAU7802 initialized\n");
 
-        const NauStatus calibrationStatus = _adc.calibrate();
-        if (calibrationStatus == NauStatus::OK) {
-            SOAR_PRINT("NAU7802Task - NAU7802 calibration complete\n");
-        } else {
-            SOAR_PRINT("NAU7802Task - NAU7802 calibration failed (%d), continuing\n",
-                       static_cast<int>(calibrationStatus));
+        if (!_adc.setLDO(NAU7802_4V5)) {
+            SOAR_PRINT("NAU7802Task - Failed to set LDO\n");
+            return false;
+        }
+
+        if (!_adc.setGain(NAU7802_GAIN_128)) {
+            SOAR_PRINT("NAU7802Task - Failed to set gain\n");
+            return false;
+        }
+
+        if (!_adc.setRate(NAU7802_RATE_10SPS)) {
+            SOAR_PRINT("NAU7802Task - Failed to set rate\n");
+            return false;
+        }
+
+        if (!_adc.setChannel(0)) {
+            SOAR_PRINT("NAU7802Task - Failed to set channel\n");
+            return false;
+        }
+
+        if (!_adc.setPGACap(true)) {
+            SOAR_PRINT("NAU7802Task - Failed to set PGA cap\n");
+            return false;
+        }
+
+        SOAR_PRINT("NAU7802Task - LDO %s, gain %s, rate %s\n",
+                   LdoToString(_adc.getLDO()),
+                   GainToString(_adc.getGain()),
+                   RateToString(_adc.getRate()));
+
+        if (!_adc.calibrate(NAU7802_CALMOD_INTERNAL)) {
+            SOAR_PRINT("NAU7802Task - NAU7802 calibration failed, continuing\n");
+        }
+
+        for (uint8_t i = 0; i < 10; ++i) {
+            while (!_adc.available()) {
+                vTaskDelay(pdMS_TO_TICKS(1));
+            }
+            (void)_adc.read();
         }
 
         return true;
@@ -194,73 +313,38 @@ void NAU7802Task::Run(void * pvParams)
     unsigned long lastSampleTick = xTaskGetTickCount();
     unsigned long lastInitRetryTick = xTaskGetTickCount();
 
-
-#if 1
     while (1) {
-
-
         const TickType_t now = xTaskGetTickCount();
 
-        // Main read loop: check timing, then check if data is ready, then read
+        if (!_sensorReady && ((now - lastInitRetryTick) >= pdMS_TO_TICKS(NAU7802_REINIT_PERIOD_MS))) {
+            lastInitRetryTick = now;
+            _sensorReady = initializeSensor();
+        }
+
         if (_sensorReady && _enableReading && ((now - lastSampleTick) >= pdMS_TO_TICKS(NAU7802_SAMPLE_PERIOD_MS))) {
-            
-            // Check if DRDY pin is asserted or device reports ready
-            const bool pinSet = IsDrdyAsserted(LC1_DRDY_GPIO_Port, LC1_DRDY_Pin);
-            const bool deviceReady = _adc.isReady();
-
-            if (pinSet || deviceReady) {
-                lastSampleTick = now;
-                NAU7802_OUT adcData{};
-                
-                if (_adc.readSensor(&adcData) == NauStatus::OK) {
-                        if (_enableLogging) {
-                            // Print pin and device status
-                            SOAR_PRINT("NAU7802Task - pin=%d ready=%d raw: %ld\n",
-                                       pinSet ? 1 : 0,
-                                       deviceReady ? 1 : 0,
-                                       static_cast<long>(adcData.raw_reading));
-
-                            // Read raw bytes and PU_CTRL status for debug
-                            uint8_t bytes[3] = {0};
-                            uint8_t pu = 0;
-                            bool gotBytes = _i2cWrapper.readBytes(NAU7802_I2C_ADDRESS, NAU7802_REG_ADC_B2, bytes, 3);
-                            bool gotPu = _i2cWrapper.readByte(NAU7802_I2C_ADDRESS, NAU7802_REG_PU_CTRL, &pu);
-
-                            const long long milliKg = rawToMilliKg(static_cast<long>(adcData.raw_reading));
-                            const long long milliUnits = _outputInKg ? milliKg : milliKgToMilliLb(milliKg);
-                            const long wholeUnits = static_cast<long>(milliUnits / 1000LL);
-                            long fractionalUnits = static_cast<long>(milliUnits % 1000LL);
-                            if (fractionalUnits < 0) {
-                                fractionalUnits = -fractionalUnits;
-                            }
-
-                            SOAR_PRINT("NAU7802Task - raw: %ld, weight: %ld.%03ld %s\n",
-                                       static_cast<long>(adcData.raw_reading),
-                                       wholeUnits,
-                                       fractionalUnits,
-                                       _outputInKg ? "kg" : "lb");
-
-                            if (gotBytes) {
-                                SOAR_PRINT("NAU7802Task - raw bytes: 0x%02X 0x%02X 0x%02X\n", bytes[0], bytes[1], bytes[2]);
-                            }
-                            if (gotPu) {
-                                SOAR_PRINT("NAU7802Task - PU_CTRL: 0x%02X\n", pu);
-                            }
-                            // Also print key control regs
-                            uint8_t ctrl1 = 0, ctrl2 = 0, rev = 0;
-                            if (_i2cWrapper.readByte(NAU7802_I2C_ADDRESS, NAU7802_REG_CTRL1, &ctrl1)) {
-                                SOAR_PRINT("NAU7802Task - CTRL1: 0x%02X\n", ctrl1);
-                            }
-                            if (_i2cWrapper.readByte(NAU7802_I2C_ADDRESS, NAU7802_REG_CTRL2, &ctrl2)) {
-                                SOAR_PRINT("NAU7802Task - CTRL2: 0x%02X\n", ctrl2);
-                            }
-                            if (_i2cWrapper.readByte(NAU7802_I2C_ADDRESS, NAU7802_REG_REVISION_ID, &rev)) {
-                                SOAR_PRINT("NAU7802Task - REV_ID: 0x%02X\n", rev);
-                            }
-                        }
+            lastSampleTick = now;
+            while (!_adc.available()) {
+                vTaskDelay(pdMS_TO_TICKS(1));
+            }
+            const int32_t raw = _adc.read();
+            UpdateEma(_emaAlpha, raw, &_emaValue, &_emaInitialized);
+            if (_enableLogging) {
+                if (_calibValid) {
+                    float grams = ComputeWeightGrams(_calibSlopeGPerCount, _calibOffsetG, _emaValue);
+                    if (_tareValid) {
+                        grams -= _tareGrams;
                     }
-                } else if (_enableLogging) {
-                    SOAR_PRINT("NAU7802Task - Failed to read sensor data.\n");
+                    const float kg = grams / 1000.0f;
+                    const float lb = grams * NAU7802_LB_PER_G;
+                    SOAR_PRINT("NAU7802Task - raw: %ld ema: %.1f weight: %.3f kg (%.3f lb)\n",
+                               static_cast<long>(raw),
+                               static_cast<double>(_emaValue),
+                               static_cast<double>(kg),
+                               static_cast<double>(lb));
+                } else {
+                    SOAR_PRINT("NAU7802Task - raw: %ld ema: %.1f\n",
+                               static_cast<long>(raw),
+                               static_cast<double>(_emaValue));
                 }
             }
         }
@@ -270,65 +354,74 @@ void NAU7802Task::Run(void * pvParams)
             HandleCommand(cm);
         }
     }
-#endif
+}
 
 /**
  * @brief HandleCommand handles any command passed to NAU7802Task primary event queue.
  * @param cm Reference to the command object to handle
-*/
+ */
 void NAU7802Task::HandleCommand(Command& cm)
 {
+    auto finalizeCalibration = [this]() {
+        const int32_t delta = _calibRaw1000g - _calibRaw500g;
+        if (delta == 0) {
+            _calibValid = false;
+            SOAR_PRINT("NAU7802Task - Calibration failed (no delta)\n");
+            return;
+        }
+
+        _calibSlopeGPerCount = 500.0f / static_cast<float>(delta);
+        _calibOffsetG = 500.0f - (_calibSlopeGPerCount * static_cast<float>(_calibRaw500g));
+        _calibValid = true;
+        _tareGrams = 0.0f;
+        _tareValid = false;
+        SOAR_PRINT("NAU7802Task - Calibration set: slope=%.6f g/count offset=%.3f g\n",
+                   static_cast<double>(_calibSlopeGPerCount),
+                   static_cast<double>(_calibOffsetG));
+    };
+
     switch (cm.GetCommand()) {
     case DATA_COMMAND:
     {
         switch (cm.GetTaskCommand()) {
         case NAUTASK_COMMAND_NAU_READ:
         {
-            if (_sensorReady) {
-                NAU7802_OUT adcData{};
-                if (_adc.readSensor(&adcData) == NauStatus::OK) {
-                    uint8_t bytes[3] = {0};
-                    uint8_t pu = 0;
-                    bool gotBytes = _i2cWrapper.readBytes(NAU7802_I2C_ADDRESS, NAU7802_REG_ADC_B2, bytes, 3);
-                    bool gotPu = _i2cWrapper.readByte(NAU7802_I2C_ADDRESS, NAU7802_REG_PU_CTRL, &pu);
-
-                    const long long milliKg = rawToMilliKg(static_cast<long>(adcData.raw_reading));
-                    const long long milliUnits = _outputInKg ? milliKg : milliKgToMilliLb(milliKg);
-                    const long wholeUnits = static_cast<long>(milliUnits / 1000LL);
-                    long fractionalUnits = static_cast<long>(milliUnits % 1000LL);
-                    if (fractionalUnits < 0) fractionalUnits = -fractionalUnits;
-
-                    if (_enableLogging) {
-                        SOAR_PRINT("NAU7802Task - read raw: %ld, weight: %ld.%03ld %s\n",
-                                   static_cast<long>(adcData.raw_reading), wholeUnits, fractionalUnits,
-                                   _outputInKg ? "kg" : "lb");
-
-                        if (gotBytes) {
-                            SOAR_PRINT("NAU7802Task - read raw bytes: 0x%02X 0x%02X 0x%02X\n", bytes[0], bytes[1], bytes[2]);
-                        }
-                        if (gotPu) {
-                            SOAR_PRINT("NAU7802Task - read PU_CTRL: 0x%02X\n", pu);
-                        }
-                    }
-                } else if (_enableLogging) {
-                    SOAR_PRINT("NAU7802Task - Read command failed to read sensor data.\n");
+            if (!_sensorReady) {
+                SOAR_PRINT("NAU7802Task - read skipped (not ready)\n");
+                break;
+            }
+            while (!_adc.available()) {
+                vTaskDelay(pdMS_TO_TICKS(1));
+            }
+            const int32_t raw = _adc.read();
+            UpdateEma(_emaAlpha, raw, &_emaValue, &_emaInitialized);
+            if (_calibValid) {
+                float grams = ComputeWeightGrams(_calibSlopeGPerCount, _calibOffsetG, _emaValue);
+                if (_tareValid) {
+                    grams -= _tareGrams;
                 }
+                const float kg = grams / 1000.0f;
+                const float lb = grams * NAU7802_LB_PER_G;
+                SOAR_PRINT("NAU7802Task - read raw: %ld ema: %.1f weight: %.3f kg (%.3f lb)\n",
+                           static_cast<long>(raw),
+                           static_cast<double>(_emaValue),
+                           static_cast<double>(kg),
+                           static_cast<double>(lb));
+            } else {
+                SOAR_PRINT("NAU7802Task - read raw: %ld ema: %.1f\n",
+                           static_cast<long>(raw),
+                           static_cast<double>(_emaValue));
             }
             break;
         }
         case NAUTASK_COMMAND_NAU_READ_ISR:
-        {
-            if (_sensorReady) {
-                NAU7802_OUT adcData{};
-                (void)_adc.readSensor(&adcData);
+            if (_sensorReady && _adc.available()) {
+                (void)_adc.read();
             }
             break;
-        }
         case NAUTASK_COMMAND_NAU_DRDY:
-        {
             PrintDrdy();
             break;
-        }
         case NAUTASK_COMMAND_NAU_TOGGLE:
             ToggleTaskActive();
             break;
@@ -347,182 +440,94 @@ void NAU7802Task::HandleCommand(Command& cm)
         case NAUTASK_COMMAND_NAU_DISABLE_LOG:
             SetLoggingEnabled(false);
             break;
-        case NAUTASK_COMMAND_NAU_DUMP_REGS:
-        {
-            SOAR_PRINT("NAU7802Task - Dumping registers:\n");
-            const uint8_t regs[] = {NAU7802_REG_PU_CTRL, NAU7802_REG_CTRL1, NAU7802_REG_CTRL2,
-                                     NAU7802_REG_ADC_B2, NAU7802_REG_ADC_B1, NAU7802_REG_ADC_B0,
-                                     NAU7802_REG_REVISION_ID};
-            for (size_t i = 0; i < sizeof(regs); ++i) {
-                uint8_t val = 0;
-                if (_i2cWrapper.readByte(NAU7802_I2C_ADDRESS, regs[i], &val)) {
-                    SOAR_PRINT("  Reg 0x%02X = 0x%02X\n", regs[i], val);
-                } else {
-                    SOAR_PRINT("  Reg 0x%02X = READ_ERR\n", regs[i]);
-                }
-            }
+        case NAUTASK_COMMAND_NAU_SET_GAIN_1X:
+            _adc.setGain(NAU7802_GAIN_1);
+            SOAR_PRINT("NAU7802Task - Gain set to 1x\n");
             break;
-        }
-        case NAUTASK_COMMAND_NAU_BUSCHK:
-        {
-            SOAR_PRINT("NAU7802Task - Bus check start\n");
-
-            const int initialScl = (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8) == GPIO_PIN_SET) ? 1 : 0;
-            const int initialSda = (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_9) == GPIO_PIN_SET) ? 1 : 0;
-            SOAR_PRINT("NAU7802Task - Bus check initial SCL=%d SDA=%d\n", initialScl, initialSda);
-
-            (void)HAL_I2C_DeInit(&hi2c3);
-
-            GPIO_InitTypeDef gpio = {0};
-            __HAL_RCC_GPIOC_CLK_ENABLE();
-
-            gpio.Pin = GPIO_PIN_8;
-            gpio.Mode = GPIO_MODE_OUTPUT_PP;
-            gpio.Pull = GPIO_NOPULL;
-            gpio.Speed = GPIO_SPEED_FREQ_LOW;
-            HAL_GPIO_Init(GPIOC, &gpio);
-
-            SOAR_PRINT("NAU7802Task - Bus check toggling PC8\n");
-            for (int i = 0; i < 8; ++i) {
-                HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
-                vTaskDelay(pdMS_TO_TICKS(20));
-            }
-
-            gpio.Pin = GPIO_PIN_9;
-            gpio.Mode = GPIO_MODE_OUTPUT_PP;
-            gpio.Pull = GPIO_NOPULL;
-            gpio.Speed = GPIO_SPEED_FREQ_LOW;
-            HAL_GPIO_Init(GPIOC, &gpio);
-
-            SOAR_PRINT("NAU7802Task - Bus check toggling PC9\n");
-            for (int i = 0; i < 8; ++i) {
-                HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
-                vTaskDelay(pdMS_TO_TICKS(20));
-            }
-
-            hi2c3.Instance = I2C3;
-            if (HAL_I2C_Init(&hi2c3) != HAL_OK) {
-                SOAR_PRINT("NAU7802Task - Bus check HAL_I2C_Init failed\n");
-            }
-            (void)HAL_I2CEx_ConfigAnalogFilter(&hi2c3, I2C_ANALOGFILTER_ENABLE);
-            (void)HAL_I2CEx_ConfigDigitalFilter(&hi2c3, 0);
-
-            int ack54 = 0;
-            int ack56 = 0;
-            HAL_StatusTypeDef s54 = HAL_ERROR;
-            HAL_StatusTypeDef s56 = HAL_ERROR;
-
-            SOAR_PRINT("NAU7802Task - Bus check probing 0x54 and 0x56\n");
-            for (int i = 0; i < 25; ++i) {
-                s54 = HAL_I2C_IsDeviceReady(&hi2c3, (0x2A << 1), 1, 5);
-                s56 = HAL_I2C_IsDeviceReady(&hi2c3, (0x2B << 1), 1, 5);
-                if (s54 == HAL_OK) {
-                    ++ack54;
-                }
-                if (s56 == HAL_OK) {
-                    ++ack56;
-                }
-                vTaskDelay(pdMS_TO_TICKS(10));
-            }
-
-            const unsigned long state = (unsigned long)HAL_I2C_GetState(&hi2c3);
-            const unsigned long err = (unsigned long)HAL_I2C_GetError(&hi2c3);
-            const unsigned long isr = (unsigned long)I2C3->ISR;
-            const int finalScl = (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8) == GPIO_PIN_SET) ? 1 : 0;
-            const int finalSda = (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_9) == GPIO_PIN_SET) ? 1 : 0;
-
-            SOAR_PRINT("NAU7802Task - Bus check done last54=%d last56=%d ack54=%d ack56=%d state=%lu err=0x%08lX ISR=0x%08lX scl=%d sda=%d\n",
-                       (int)s54,
-                       (int)s56,
-                       ack54,
-                       ack56,
-                       state,
-                       err,
-                       isr,
-                       finalScl,
-                       finalSda);
-
+        case NAUTASK_COMMAND_NAU_SET_GAIN_2X:
+            _adc.setGain(NAU7802_GAIN_2);
+            SOAR_PRINT("NAU7802Task - Gain set to 2x\n");
             break;
-        }
+        case NAUTASK_COMMAND_NAU_SET_GAIN_4X:
+            _adc.setGain(NAU7802_GAIN_4);
+            SOAR_PRINT("NAU7802Task - Gain set to 4x\n");
+            break;
+        case NAUTASK_COMMAND_NAU_SET_GAIN_8X:
+            _adc.setGain(NAU7802_GAIN_8);
+            SOAR_PRINT("NAU7802Task - Gain set to 8x\n");
+            break;
+        case NAUTASK_COMMAND_NAU_SET_GAIN_128:
+            _adc.setGain(NAU7802_GAIN_128);
+            SOAR_PRINT("NAU7802Task - Gain set to 128x\n");
+            break;
         case NAUTASK_COMMAND_NAU_TARE:
         {
             if (!_sensorReady) {
-                SOAR_PRINT("NAU7802Task - Tare: sensor not ready\n");
+                SOAR_PRINT("NAU7802Task - Tare skipped (not ready)\n");
                 break;
             }
-            NAU7802_OUT adcData{};
-            if (_adc.readSensor(&adcData) == NauStatus::OK) {
-                _tareCounts = static_cast<long>(adcData.raw_reading);
-                SOAR_PRINT("NAU7802Task - Tare set to %ld\n", _tareCounts);
-            } else {
-                SOAR_PRINT("NAU7802Task - Failed to perform tare (read error)\n");
+            if (!_calibValid) {
+                SOAR_PRINT("NAU7802Task - Tare skipped (calibration required)\n");
+                break;
             }
+            int32_t raw = 0;
+            int32_t spread = 0;
+            if (!ReadStableAverage(_adc, NAU7802_CAL_SAMPLES, &raw, &spread)) {
+                SOAR_PRINT("NAU7802Task - Tare failed (unstable, spread=%ld)\n",
+                           static_cast<long>(spread));
+                break;
+            }
+            UpdateEma(_emaAlpha, raw, &_emaValue, &_emaInitialized);
+            _tareGrams = ComputeWeightGrams(_calibSlopeGPerCount, _calibOffsetG, _emaValue);
+            _tareValid = true;
+            SOAR_PRINT("NAU7802Task - Tare set to %.3f g\n",
+                       static_cast<double>(_tareGrams));
             break;
         }
-        case NAUTASK_COMMAND_NAU_BASELINE:
+        case NAUTASK_COMMAND_NAU_CAL_500G:
         {
             if (!_sensorReady) {
-                SOAR_PRINT("NAU7802Task - Baseline: sensor not ready\n");
+                SOAR_PRINT("NAU7802Task - Calibration skipped (not ready)\n");
                 break;
             }
-            const unsigned int N = 64;
-            long long sum = 0;
-            long long sumsq = 0;
-            unsigned int got = 0;
-            for (unsigned int i = 0; i < N; ++i) {
-                NAU7802_OUT adcData{};
-                unsigned int wait = 0;
-                while (!_adc.isReady() && wait++ < 200) {
-                    vTaskDelay(pdMS_TO_TICKS(5));
-                }
-                if (_adc.readSensor(&adcData) == NauStatus::OK) {
-                    long val = static_cast<long>(adcData.raw_reading);
-                    sum += val;
-                    sumsq += (long long)val * val;
-                    ++got;
-                }
+            int32_t raw = 0;
+            int32_t spread = 0;
+            if (!ReadStableAverage(_adc, NAU7802_CAL_SAMPLES, &raw, &spread)) {
+                SOAR_PRINT("NAU7802Task - Calibration failed (unstable, spread=%ld)\n",
+                           static_cast<long>(spread));
+                break;
             }
-            if (got > 0) {
-                double mean = (double)sum / got;
-                double variance = ((double)sumsq / got) - (mean * mean);
-                double stddev = variance > 0 ? sqrt(variance) : 0.0;
-                SOAR_PRINT("NAU7802Task - Baseline samples=%u mean=%.0f stddev=%.2f\n", got, mean, stddev);
-            } else {
-                SOAR_PRINT("NAU7802Task - Baseline: no samples\n");
+            _calibRaw500g = raw;
+            _calibHave500g = true;
+            SOAR_PRINT("NAU7802Task - Calibration 500g raw=%ld\n", static_cast<long>(raw));
+            if (_calibHave1000g) {
+                finalizeCalibration();
             }
             break;
         }
-        case NAUTASK_COMMAND_NAU_SET_GAIN_1X:
-        case NAUTASK_COMMAND_NAU_SET_GAIN_2X:
-        case NAUTASK_COMMAND_NAU_SET_GAIN_4X:
-        case NAUTASK_COMMAND_NAU_SET_GAIN_8X:
-        case NAUTASK_COMMAND_NAU_SET_GAIN_128:
+        case NAUTASK_COMMAND_NAU_CAL_1000G:
         {
-            uint8_t gain = NAU7802_GAIN_1X;
-            const char* label = "1x";
-            switch (cm.GetTaskCommand()) {
-            case NAUTASK_COMMAND_NAU_SET_GAIN_1X:
-                gain = NAU7802_GAIN_1X; label = "1x"; break;
-            case NAUTASK_COMMAND_NAU_SET_GAIN_2X:
-                gain = NAU7802_GAIN_2X; label = "2x"; break;
-            case NAUTASK_COMMAND_NAU_SET_GAIN_4X:
-                gain = NAU7802_GAIN_4X; label = "4x"; break;
-            case NAUTASK_COMMAND_NAU_SET_GAIN_8X:
-                gain = NAU7802_GAIN_8X; label = "8x"; break;
-            case NAUTASK_COMMAND_NAU_SET_GAIN_128:
-                gain = NAU7802_GAIN_128X; label = "128x"; break;
-            default:
+            if (!_sensorReady) {
+                SOAR_PRINT("NAU7802Task - Calibration skipped (not ready)\n");
                 break;
             }
-            if (_adc.setGain(gain) == NauStatus::OK) {
-                SOAR_PRINT("NAU7802Task - Gain set to %s\n", label);
-            } else {
-                SOAR_PRINT("NAU7802Task - Failed to set gain to %s\n", label);
+            int32_t raw = 0;
+            int32_t spread = 0;
+            if (!ReadStableAverage(_adc, NAU7802_CAL_SAMPLES, &raw, &spread)) {
+                SOAR_PRINT("NAU7802Task - Calibration failed (unstable, spread=%ld)\n",
+                           static_cast<long>(spread));
+                break;
+            }
+            _calibRaw1000g = raw;
+            _calibHave1000g = true;
+            SOAR_PRINT("NAU7802Task - Calibration 1000g raw=%ld\n", static_cast<long>(raw));
+            if (_calibHave500g) {
+                finalizeCalibration();
             }
             break;
         }
         default:
-            SOAR_PRINT("NAU7802Task - Received Unsupported DATA_COMMAND {%d}\n", cm.GetTaskCommand());
+            SOAR_PRINT("NAU7802Task - Command not supported (%d)\n", cm.GetTaskCommand());
             break;
         }
         break;
@@ -533,19 +538,6 @@ void NAU7802Task::HandleCommand(Command& cm)
     }
 
     cm.Reset();
-}
-
-long long NAU7802Task::rawToMilliKg(long rawReading) const {
-    if (NAU7802_COUNTS_PER_KG <= 0) {
-        return 0;
-    }
-
-    return (static_cast<long long>(rawReading) - static_cast<long long>(_tareCounts)) * 1000LL /
-           NAU7802_COUNTS_PER_KG;
-}
-
-long long NAU7802Task::milliKgToMilliLb(long long milliKg) const {
-    return (milliKg * 2204622LL) / 1000000LL;
 }
 
 extern "C" void NAU7802Task_HandleDrdyInterrupt(uint16_t gpioPin)

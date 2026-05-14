@@ -134,22 +134,22 @@ void DebugTask::HandleDebugMessage(const char *msg)
       NAU7802Task::Inst().PrintStatus();
     } else if (strcmp(lowerMsg, "nau drdy") == 0) {
       NAU7802Task::Inst().PrintDrdy();
-    } else if (strcmp(lowerMsg, "nau regs") == 0) {
-      Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_DUMP_REGS);
-      NAU7802Task::Inst().GetEventQueue()->Send(cmd);
     } else if (strcmp(lowerMsg, "nau read") == 0) {
       Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_READ);
-      NAU7802Task::Inst().GetEventQueue()->Send(cmd);
-    } else if (strcmp(lowerMsg, "nau tare") == 0) {
-      Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_TARE);
-      NAU7802Task::Inst().GetEventQueue()->Send(cmd);
-    } else if (strcmp(lowerMsg, "nau baseline") == 0) {
-      Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_BASELINE);
       NAU7802Task::Inst().GetEventQueue()->Send(cmd);
     } else if (strcmp(lowerMsg, "nau log on") == 0) {
       NAU7802Task::Inst().SetLoggingEnabled(true);
     } else if (strcmp(lowerMsg, "nau log off") == 0) {
       NAU7802Task::Inst().SetLoggingEnabled(false);
+    } else if (strcmp(lowerMsg, "nau cal 500") == 0) {
+      Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_CAL_500G);
+      NAU7802Task::Inst().GetEventQueue()->Send(cmd);
+    } else if (strcmp(lowerMsg, "nau cal 1000") == 0) {
+      Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_CAL_1000G);
+      NAU7802Task::Inst().GetEventQueue()->Send(cmd);
+    } else if (strcmp(lowerMsg, "nau tare") == 0) {
+      Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_TARE);
+      NAU7802Task::Inst().GetEventQueue()->Send(cmd);
     } else if (strcmp(lowerMsg, "nau gain 1x") == 0) {
       Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_SET_GAIN_1X);
       NAU7802Task::Inst().GetEventQueue()->Send(cmd);
@@ -165,12 +165,9 @@ void DebugTask::HandleDebugMessage(const char *msg)
     } else if (strcmp(lowerMsg, "nau gain 128x") == 0) {
       Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_SET_GAIN_128);
       NAU7802Task::Inst().GetEventQueue()->Send(cmd);
-    } else if (strcmp(lowerMsg, "nau buschk") == 0) {
-      Command cmd(DATA_COMMAND, NAUTASK_COMMAND_NAU_BUSCHK);
-      NAU7802Task::Inst().GetEventQueue()->Send(cmd);
     } else {
       SOAR_PRINT("Debug: Unsupported command: %s\n", cleanMsg);
-      SOAR_PRINT("Debug: Use nau [status|drdy|regs|read|tare|baseline|buschk|log on|log off|gain 1x|gain 2x|gain 4x|gain 8x|gain 128x|on|off|toggle]\n");
+      SOAR_PRINT("Debug: Use nau [status|drdy|read|log on|log off|cal 500|cal 1000|tare|gain 1x|gain 2x|gain 4x|gain 8x|gain 128x|on|off|toggle]\n");
       debugMsgIdx = 0;
       isDebugMsgReady = false;
       return;
