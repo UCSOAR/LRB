@@ -151,10 +151,10 @@ void DebugTask::HandleDebugMessage(const char *msg)
   }
   else if (strcmp(lowerMsg, "fs_log") == 0)
   {
-    SOAR_PRINT("Debug: Triggering sensor data logging\n");
+    SOAR_PRINT("Debug: Triggering (commented out) sensor data logging\n");
     // Sample data for testing
-    float temp = 25.5f + (HAL_GetTick() % 100) / 10.0f;     // Simulate varying temperature
-    float humidity = 60.0f + (HAL_GetTick() % 200) / 10.0f; // Simulate varying humidity
+    //float temp = 25.5f + (HAL_GetTick() % 100) / 10.0f;     // Simulate varying temperature
+    //float humidity = 60.0f + (HAL_GetTick() % 200) / 10.0f; // Simulate varying humidity
   }
   else if (strcmp(lowerMsg, "fs_cleanup") == 0)
   {
