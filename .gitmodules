@@ -6,4 +6,4 @@
 [submodule "SoarOS"]
 	path = SoarOS
 	url = https://github.com/UCSOAR/SoarOperatingSystem.git
-	branch = Javier/G4
+	branch = master
