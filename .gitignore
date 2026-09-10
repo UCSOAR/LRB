@@ -1,11 +1,16 @@
+# STM32CubeIDE / Eclipse Project Files & Launch Configurations
+!.project
+!.cproject
+!.settings/
+!*.launch
+
 # Ignore Build folders (recursive)
-Debug/**
-Release/**
-**/Debug/**
-Debug
-**/Release/**
-**/build/**
-**/cmake-build-*/**
+/[Dd]ebug/
+/[Rr]elease/
+/**/[Dd]ebug/
+/**/[Rr]elease/
+/**/build/
+/**/cmake-build-*/**
 
 # Ignore Binaries folder outputs
 **/Binaries/**
@@ -35,6 +40,10 @@ Debug
 *.log
 .cache/
 .clangd/
+
+# Eclipse workspace metadata & developer-local overrides
+.metadata/
+*.launch.user
 
 # OS/editor noise
 .DS_Store
