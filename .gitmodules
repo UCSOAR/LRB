@@ -1,8 +1,8 @@
 
 [submodule "SoarDrivers"]
 	path = SoarDrivers
-	url = https://github.com/UCSOAR/PeripheralDriversSubmodule.git
-	branch = Javier/G4
+	url = https://github.com/UCSOAR/PeripheralDriversSubmodule/
+	branch = master
 [submodule "SoarOS"]
 	path = SoarOS
 	url = https://github.com/UCSOAR/SoarOperatingSystem.git
